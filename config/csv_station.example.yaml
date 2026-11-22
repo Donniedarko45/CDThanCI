@@ -1,0 +1,33 @@
+# Example: run the pipeline on a CSV export from a real monitoring station.
+#
+#   aqi-pipeline --config config/csv_station.example.yaml bootstrap --until 2025-12-31
+#   aqi-pipeline --config config/csv_station.example.yaml run-cycle --now "2026-01-01 23:00"
+#
+# The file needs one row per hour. Map your column names to the pipeline's names
+# under `columns`. Units: µg/m³ for every pollutant except CO, which must be mg/m³
+# (use `scale` to convert). Weather columns are required; if the file has no fc_*
+# forecast columns they are built from the weather that followed each row.
+
+location: My station
+run_dir: runs/my_station
+
+source:
+  type: csv
+  path: data/station_hourly.csv
+  columns:
+    timestamp: Datetime
+    pm25: PM2.5
+    pm10: PM10
+    no2: NO2
+    so2: SO2
+    co: CO
+    o3: O3
+    temperature: Temp
+    humidity: RH
+    wind_speed: WS
+    precipitation: Rain
+  # scale: {co: 0.001}          # uncomment if CO is in µg/m³
+
+# With a year or more of history, day-of-year features become safe to use:
+# model:
+#   use_day_of_year: true
