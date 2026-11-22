@@ -1,0 +1,23 @@
+# Two containers over one volume: the scheduler runs a pipeline cycle every hour,
+# the API serves forecasts and monitoring state.
+#
+#   docker compose run --rm scheduler aqi-pipeline --config /app/config/open_meteo.example.yaml --run-dir /data bootstrap
+#   docker compose up -d
+services:
+  scheduler:
+    build: .
+    command: ["aqi-pipeline", "--config", "/app/config/open_meteo.example.yaml", "--run-dir", "/data", "schedule", "--every", "3600"]
+    volumes: ["aqi-data:/data"]
+    restart: unless-stopped
+
+  api:
+    build: .
+    environment:
+      AQI_CONFIG: /app/config/open_meteo.example.yaml
+      AQI_RUN_DIR: /data
+    ports: ["8000:8000"]
+    volumes: ["aqi-data:/data"]
+    restart: unless-stopped
+
+volumes:
+  aqi-data:
