@@ -1,6 +1,15 @@
 __pycache__/
 *.egg-info/
 .pytest_cache/
+.venv/
+.uv-cache/
 runs/
 data/
 *.db
+*.db-wal
+*.db-shm
+*.db-journal
+*:Zone.Identifier
+*.zip
+.DS_Store
+Thumbs.db

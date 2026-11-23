@@ -115,9 +115,22 @@ def _update(obj: Any, values: dict[str, Any]) -> None:
         if key not in known:
             raise KeyError(f"unknown config key: {key!r} in {type(obj).__name__}")
         current = getattr(obj, key)
-        if is_dataclass(current) and isinstance(value, dict):
+        if is_dataclass(current):
+            if value is None:
+                continue
+            if not isinstance(value, dict):
+                raise TypeError(f"expected mapping for config section {key!r}, got {type(value).__name__}")
             _update(current, value)
+        elif isinstance(current, dict):
+            if value is None:
+                setattr(obj, key, {})
+            elif not isinstance(value, dict):
+                raise TypeError(f"expected mapping for config section {key!r}, got {type(value).__name__}")
+            else:
+                setattr(obj, key, value)
         else:
+            if key == "run_dir" and value is not None:
+                value = str(value)
             setattr(obj, key, value)
 
 
@@ -126,7 +139,11 @@ def load_config(path: str | Path | None = None, overrides: dict[str, Any] | None
     cfg = Config()
     if path:
         with open(path, "r", encoding="utf-8") as fh:
-            _update(cfg, yaml.safe_load(fh) or {})
+            loaded = yaml.safe_load(fh)
+        if loaded is not None:
+            if not isinstance(loaded, dict):
+                raise ValueError(f"config file {path} must contain a YAML mapping")
+            _update(cfg, loaded)
     if overrides:
         _update(cfg, overrides)
     return cfg

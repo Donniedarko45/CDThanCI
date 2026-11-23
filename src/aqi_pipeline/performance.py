@@ -57,7 +57,8 @@ def performance_report(preds: pd.DataFrame, ref_rel_mae: float, cfg: MonitorConf
     report.update({
         "level": level, "mae": round(metrics["mae"], 3), "rmse": round(metrics["rmse"], 3),
         "bias": round(metrics["bias"], 3), "mae_naive": round(metrics["mae_naive"], 3),
-        "rel_mae": round(metrics["rel_mae"], 4), "expected_mae": round(expected, 3),
+        "rel_mae": None if np.isnan(metrics["rel_mae"]) else round(metrics["rel_mae"], 4),
+        "expected_mae": round(expected, 3),
         "ratio": round(ratio, 3), "gap": round(gap, 3),
         "category_accuracy": round(metrics["category_accuracy"], 4),
     })
@@ -78,7 +79,7 @@ def daily_ratio(preds: pd.DataFrame, ref_rel_mae: float, day_end: pd.Timestamp, 
 def cusum_update(state: dict[str, float] | None, ratio: float | None, cfg: MonitorConfig) -> dict[str, Any]:
     """One-sided CUSUM on (daily ratio - 1): accumulates only sustained excess error."""
     g = float(state["g"]) if state else 0.0
-    if ratio is not None:
+    if ratio is not None and not np.isnan(ratio):
         x = min(ratio - 1.0, 1.5)
         g = max(0.0, g + x - cfg.cusum_slack)
     return {"g": round(g, 4), "alarm": bool(g > cfg.cusum_alarm)}

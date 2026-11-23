@@ -303,3 +303,226 @@ def test_open_meteo_parser_converts_units_and_builds_forecast_columns():
     at = frame.set_index("timestamp")
     assert at.loc["2026-01-01 00:00", "fc_wind_speed"] == pytest.approx(2.0)
     assert at.loc["2026-01-02 23:00", "fc_wind_speed"] == pytest.approx(6.0)   # looks into the forecast hours
+
+
+# ---------------------------------------------------------------- edge cases & regressions
+def test_compute_aqi_handles_empty_and_missing_pollutant_columns():
+    idx = pd.date_range("2026-01-01", periods=10, freq="h")
+    weather_only = pd.DataFrame({"temperature": 20.0, "humidity": 50.0}, index=idx)
+    out = aqi.compute_aqi(weather_only)
+    assert len(out) == 10 and out["aqi"].isna().all() and out["dominant"].isna().all()
+
+    empty = pd.DataFrame(columns=["pm25", "pm10", "no2"], index=pd.DatetimeIndex([], dtype="datetime64[ns]"))
+    out_empty = aqi.compute_aqi(empty)
+    assert out_empty.empty and list(out_empty.columns[:2]) == ["aqi", "dominant"]
+
+    assert aqi.category_name(np.float64(150.0)) == "Moderate"
+    assert aqi.category_name(None) == "Unknown"
+
+
+def test_config_handles_null_sections_and_path_run_dir(tmp_path):
+    path = tmp_path / "nulls.yaml"
+    path.write_text("data:\nsimulation:\n", encoding="utf-8")
+    cfg = load_config(path, {"run_dir": tmp_path / "run_out"})
+    assert cfg.data.horizon_hours == 24
+    assert cfg.simulation == {}
+    assert isinstance(cfg.run_dir, str) and cfg.run_dir.endswith("run_out")
+
+    path.write_text("- not-a-mapping\n", encoding="utf-8")
+    with pytest.raises(ValueError):
+        load_config(path)
+
+    path.write_text("data: invalid\n", encoding="utf-8")
+    with pytest.raises(TypeError):
+        load_config(path)
+
+
+def test_validate_batch_handles_tz_aware_timestamps_empty_and_overlapping_context(data):
+    batch = data.iloc[10:22].copy()
+    batch["pm25"] = 55.0
+    # Mix UTC Z and +05:30 offsets (05:30+05:30 == 00:00Z)
+    ts_utc = pd.to_datetime(batch["timestamp"]).dt.tz_localize("UTC")
+    iso_mixed = [t.strftime("%Y-%m-%dT%H:%M:%SZ") if i % 2 == 0
+                 else t.tz_convert("Asia/Kolkata").strftime("%Y-%m-%dT%H:%M:%S+05:30")
+                 for i, t in enumerate(ts_utc)]
+    first = batch.iloc[:4].assign(timestamp=iso_mixed[:4])
+    ctx, _ = validate_batch(first, DataConfig())
+    assert ctx.index.tz is None
+
+    second = batch.iloc[4:10].assign(timestamp=iso_mixed[4:10])
+    clean, report = validate_batch(second, DataConfig(), context=ctx.drop(columns=["qc_mask", "qc_notes"]))
+    assert clean.index.tz is None and report.stuck_cells == 6
+
+    # Context extending past batch end should not misalign stuck mask
+    ctx_full, _ = validate_batch(batch.iloc[:8], DataConfig())
+    sub, sub_report = validate_batch(batch.iloc[:2], DataConfig(), context=ctx_full.drop(columns=["qc_mask", "qc_notes"]))
+    assert len(sub) == 2 and sub_report.stuck_cells == 2
+
+    empty_batch = batch.iloc[0:0].copy()
+    _, empty_report = validate_batch(empty_batch, DataConfig())
+    assert empty_report.status == "fail" and "empty batch" in empty_report.issues
+
+    bad_ts = batch.iloc[:3].copy()
+    bad_ts.iloc[1, bad_ts.columns.get_loc("timestamp")] = None
+    with pytest.raises(ValueError):
+        validate_batch(bad_ts, DataConfig())
+
+
+def test_open_meteo_fetch_days_back_and_null_columns(monkeypatch):
+    from aqi_pipeline.sources import OpenMeteoSource
+
+    seen_params = []
+
+    def fake_get(self, url, params):
+        seen_params.append(params)
+        hours = pd.date_range("2026-01-01", periods=48, freq="h").strftime("%Y-%m-%dT%H:%M").tolist()
+        if "air-quality" in url:
+            return {"hourly_units": {"carbon_monoxide": "μg/m³"},
+                    "hourly": {"time": hours, "pm2_5": [None] * 48, "pm10": [20.0] * 48,
+                               "nitrogen_dioxide": [10.0] * 48, "sulphur_dioxide": [5.0] * 48,
+                               "carbon_monoxide": [500.0] * 48, "ozone": [30.0] * 48}}
+        return {"hourly": {"time": hours, "temperature_2m": [None] * 48, "relative_humidity_2m": [50.0] * 48,
+                           "wind_speed_10m": [2.0] * 48, "precipitation": [0.0] * 48}}
+
+    monkeypatch.setattr(OpenMeteoSource, "_get", fake_get)
+    src = OpenMeteoSource(28.61, 77.21)
+    # 36 hours = 1.5 days -> ceil(1.5) + 2 = 4 past_days (not 3 from floor .days)
+    out = src.fetch("2026-01-01T00:00:00Z", "2026-01-02T17:30:00+05:30")
+    assert seen_params[0]["past_days"] == 4
+    assert len(out) == 36 and out["pm25"].isna().all()
+
+
+def test_features_and_modeling_empty_and_all_nan_features(data):
+    import warnings
+    empty_obs = pd.DataFrame(columns=OBS_COLUMNS, index=pd.DatetimeIndex([], dtype="datetime64[ns]"))
+    ds_empty = build_dataset(empty_obs)
+    assert ds_empty.X.empty and ds_empty.y.empty and ds_empty.usable().empty
+
+    from aqi_pipeline.modeling import backtest
+    with pytest.raises(ValueError, match="not enough history"):
+        backtest(ds_empty, "ridge", {"alpha": 1.0}, load_config().model)
+
+    obs = data.set_index("timestamp")[OBS_COLUMNS].copy()
+    obs["fc_temperature"] = np.nan
+    obs["so2"] = np.nan
+    ds = build_dataset(obs, use_day_of_year=True)
+    assert {"doy_sin", "doy_cos"} <= set(ds.X.columns)
+    rows = ds.X.index[ds.usable().to_numpy()]
+    with warnings.catch_warnings(record=True) as rec:
+        warnings.simplefilter("always")
+        model = ForecastModel("ridge", {"alpha": 1.0}).fit(ds.X.loc[rows], ds.y.loc[rows], ds.aqi_now.loc[rows])
+    assert not [w for w in rec if "Skipping features" in str(w.message)]
+    assert len(model.predict(ds.X.iloc[0:0], ds.aqi_now.iloc[0:0])) == 0
+
+
+def test_drift_performance_and_retrain_edge_cases(data):
+    from aqi_pipeline.retrain import run_retraining
+    cfg = MonitorConfig()
+    empty_ref = pd.DataFrame(columns=["pm25", "temperature"], index=pd.DatetimeIndex([], dtype="datetime64[ns]"))
+    assert calibrate_thresholds(empty_ref, ["pm25", "temperature"], cfg) == {"pm25": cfg.psi_floor, "temperature": cfg.psi_floor}
+
+    rep = drift_report(empty_ref, empty_ref, {"pm25": cfg.psi_floor}, {"pm25": 1.0}, cfg)
+    assert rep["level"] == "ok" and rep["window_rows"] == 0
+
+    zero_naive = _preds(168, 0, 0)
+    perf = performance_report(zero_naive, 0.8, cfg, 168)
+    assert perf["rel_mae"] is None and perf["level"] == "ok"
+
+    s = cusum_update({"g": 1.5, "alarm": False}, float("nan"), cfg)
+    assert s["g"] == 1.5
+
+    # Zero champion MAE on holdout must not trigger ZeroDivisionError
+    obs = data.set_index("timestamp")[OBS_COLUMNS].copy()
+    ds = build_dataset(obs)
+    mcfg = load_config().model
+    mcfg.candidates = ["ridge"]
+    rcfg = RetrainConfig()
+    rcfg.strategies = ["full_history"]
+    rows = ds.X.index[ds.usable().to_numpy()]
+    perfect_champ = ForecastModel("ridge", {"alpha": 1.0}).fit(ds.X.loc[rows], ds.y.loc[rows], ds.aqi_now.loc[rows])
+    now = rows[-1] + pd.Timedelta(hours=24)
+    holdout = rows[rows >= now - pd.Timedelta(days=rcfg.eval_days)]
+    ds.y.loc[holdout] = pd.Series(perfect_champ.predict(ds.X.loc[holdout], ds.aqi_now.loc[holdout]), index=holdout)
+    outcome = run_retraining(ds, now, perfect_champ, mcfg, rcfg, horizon=24)
+    assert not outcome.promoted and outcome.gate["improvement"] == 0.0
+
+
+def test_store_json_sanitization_concurrent_access_and_registry_atomic_meta(tmp_path):
+    import json
+    from concurrent.futures import ThreadPoolExecutor
+    store = Store(tmp_path / "p.db")
+    assert store.load_observations(clean=True).empty
+    with pytest.raises(ValueError):
+        store.load_predictions(by="invalid_col")
+
+    store.log_cycle("2026-01-01T05:30:00+05:30", {"val": float("nan"), "inf": float("inf"), "ok": np.float64(1.5)})
+    latest = store.latest_cycle()
+    assert latest["cycle_time"] == "2026-01-01 00:00:00"
+    assert latest["val"] is None and latest["inf"] is None and latest["ok"] == 1.5
+    json.dumps(latest, allow_nan=False)
+
+    def reader(n):
+        s = Store(tmp_path / "p.db")
+        for _ in range(n):
+            assert s.latest_cycle()["ok"] == 1.5
+
+    def writer(n):
+        s = Store(tmp_path / "p.db")
+        for i in range(n):
+            s.set_state("k", i)
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        futs = [pool.submit(reader, 10), pool.submit(reader, 10), pool.submit(writer, 10)]
+        for f in futs:
+            f.result()
+
+    # Verify Windows UNC SQLite URI generation (e.g. \\wsl.localhost\...)
+    import os
+    from pathlib import Path
+    from aqi_pipeline.store import _sqlite_target
+    if os.name == "nt":
+        target, is_unc, _ = _sqlite_target(Path(r"\\wsl.localhost\Ubuntu\home\test dir\p#1.db"))
+        assert is_unc and target == "file:////wsl.localhost/Ubuntu/home/test%20dir/p%231.db?nolock=1"
+    else:
+        target, is_unc, _ = _sqlite_target(tmp_path / "p.db")
+        assert not is_unc and target == tmp_path / "p.db"
+
+    reg = ModelRegistry(tmp_path / "reg")
+    ref = pd.DataFrame({"x": [1.0]}, index=pd.DatetimeIndex(["2026-01-01"]))
+    v1 = reg.register(ForecastModel("ridge", {}), {"kind": "ridge", "trigger": "initial"}, ref, "2026-01-01T05:30:00+05:30")
+    reg.update_meta(v1, {"extra": float("nan")})
+    assert reg.meta(v1)["registered_at"] == "2026-01-01 00:00:00"
+    assert reg.meta(v1)["extra"] is None
+    assert not list((tmp_path / "reg").glob("*.tmp"))
+    assert not list((tmp_path / "reg" / v1).glob("*.tmp"))
+
+
+def test_pipeline_idempotent_cycle_and_short_simulate(tmp_path):
+    from aqi_pipeline.pipeline import Pipeline
+    from aqi_pipeline.simulate import run_simulation
+    from aqi_pipeline.sources import FrameSource
+
+    data = generate("2025-01-01", "2025-05-10", seed=11)
+    cfg = load_config(overrides={
+        "run_dir": str(tmp_path / "pipe"),
+        "model": {"candidates": ["ridge"]},
+        "monitor": {"drift_warn_score": 0.0, "drift_alert_score": 0.0},
+    })
+    pipe = Pipeline(cfg, FrameSource(data))
+    pipe.bootstrap("2025-05-01 23:00")
+    r1 = pipe.run_cycle("2025-05-02 23:00")
+    r2 = pipe.run_cycle("2025-05-02 23:00")
+    assert r2["quality"]["status"] == "no_data" and r2["forecasts"] == 0
+    assert r2["drift_streak"] == r1["drift_streak"]
+    assert r2["perf_streak"] == r1["perf_streak"]
+    assert r2["cusum"] == r1["cusum"]
+
+    # 1-day simulation where zero 24h forecasts mature before production_end
+    short_cfg = load_config(overrides={
+        "run_dir": str(tmp_path / "short_sim"),
+        "model": {"candidates": ["ridge"]},
+        "simulation": {"seed": 3, "history_start": "2025-01-01", "production_start": "2025-05-01",
+                       "production_end": "2025-05-02", "events": []},
+    })
+    summary = run_simulation(short_cfg, verbose=False)
+    assert summary["cycles"] == 1 and summary["comparison"]["pipeline"]["n"] == 0

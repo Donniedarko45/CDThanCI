@@ -14,16 +14,19 @@ ingest -> quality gate -> forecast -> monitor -> decide
 ## Quick start
 
 ```bash
+python -m venv .venv
+# Linux/macOS: source .venv/bin/activate
+# Windows pwsh: .venv\Scripts\Activate.ps1
 pip install -e ".[api,dev]"
 
-# Full demo: a simulated station's first year in production (about 3 minutes).
+# Full demo: a simulated station's first year in production.
 aqi-pipeline --run-dir runs/demo simulate
 
 # Open runs/demo/reports/monitoring_report.html, then:
 aqi-pipeline --run-dir runs/demo status
-aqi-pipeline --run-dir runs/demo serve        # http://127.0.0.1:8000/docs
+aqi-pipeline --run-dir runs/demo serve        # http://127.0.0.1:8000/ (dashboard), /report, /docs
 
-pytest -q                                      # 53 tests, about 15 seconds
+pytest -q                                      # 65 tests
 ```
 
 A copy of the demo's output is in `sample_run/` (report and summary) if you only
@@ -126,9 +129,9 @@ docker compose up -d                                                  # schedule
 The Dockerfile and compose file are provided but were not built or run in the
 environment this project was written in.
 
-API endpoints: `GET /health`, `/forecast?hours=24`, `/model`, `/monitoring`,
-`/events?limit=50`, and `POST /predict` (send at least 24 recent hourly rows;
-nine days gives every feature its history).
+Web Dashboard & API endpoints:
+- Live UI & report: `GET /` (offline HTML dashboard with 24h–168h interactive forecast view, monitoring & model-health charts, Light/Dark theme toggle, and What-If `POST /predict` playground), `GET /report` (self-contained HTML monitoring report), `GET /dashboard/data?hours=72`, `GET /observations/recent?hours=216`, and `GET /docs`.
+- JSON API: `GET /health`, `/forecast?hours=24`, `/model`, `/monitoring`, `/events?limit=50`, and `POST /predict` (send at least 24 recent hourly rows; nine days gives every feature its history).
 
 ## Configuration
 
@@ -138,8 +141,8 @@ lists them all with comments. Unknown keys are rejected when the file is loaded.
 ## Layout
 
 ```
-src/aqi_pipeline/   the package (one module per stage)
-tests/              unit and end-to-end tests
+src/aqi_pipeline/   the package (pipeline stages, API, HTML dashboard and report builder)
+tests/              unit, end-to-end and dashboard tests
 config/             default settings and two real-data examples
 sample_run/         report and summary from the demo run
 ```

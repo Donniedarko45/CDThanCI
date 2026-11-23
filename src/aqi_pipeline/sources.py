@@ -13,12 +13,13 @@ from __future__ import annotations
 import json
 import urllib.parse
 import urllib.request
+from pathlib import Path
 from typing import Any, Protocol
 
 import numpy as np
 import pandas as pd
 
-from .schema import FORECAST, OBS_COLUMNS, POLLUTANTS, WEATHER
+from .schema import FORECAST, OBS_COLUMNS, POLLUTANTS, WEATHER, to_utc_naive, to_utc_naive_dt
 
 
 class Source(Protocol):
@@ -34,6 +35,8 @@ def add_forecast_columns(df: pd.DataFrame, noise: bool = False) -> pd.DataFrame:
     prognosis"). Live forecasts are less accurate; expect some loss of skill.
     """
     out = df.copy()
+    for col in WEATHER:
+        out[col] = pd.to_numeric(out[col], errors="coerce")
     rev = lambda s, how: getattr(s[::-1].rolling(24, min_periods=18), how)()[::-1].shift(-1)
     out["fc_temperature"] = rev(out["temperature"], "mean")
     out["fc_humidity"] = rev(out["humidity"], "mean")
@@ -45,14 +48,14 @@ def add_forecast_columns(df: pd.DataFrame, noise: bool = False) -> pd.DataFrame:
 class FrameSource:
     def __init__(self, frame: pd.DataFrame):
         frame = frame.copy()
-        frame["timestamp"] = pd.to_datetime(frame["timestamp"])
+        frame["timestamp"] = to_utc_naive_dt(frame["timestamp"])
         self.frame = frame.sort_values("timestamp").reset_index(drop=True)
 
     def fetch(self, since, until) -> pd.DataFrame:
         ts = self.frame["timestamp"]
-        mask = ts <= pd.Timestamp(until)
+        mask = ts <= to_utc_naive(until)
         if since is not None:
-            mask &= ts > pd.Timestamp(since)
+            mask &= ts > to_utc_naive(since)
         return self.frame[mask].copy()
 
 
@@ -65,7 +68,7 @@ class CsvSource(FrameSource):
     ``scale`` (for example ``{"co": 0.001}``) to convert.
     """
 
-    def __init__(self, path: str, columns: dict[str, str] | None = None,
+    def __init__(self, path: str | Path, columns: dict[str, str] | None = None,
                  scale: dict[str, float] | None = None):
         raw = pd.read_csv(path)
         mapping = {v: k for k, v in (columns or {}).items()}
@@ -74,8 +77,10 @@ class CsvSource(FrameSource):
             raise ValueError("CSV needs a timestamp column (map it with columns={'timestamp': ...})")
         keep = ["timestamp"] + [c for c in OBS_COLUMNS if c in raw.columns]
         frame = raw[keep].copy()
+        frame["timestamp"] = to_utc_naive_dt(frame["timestamp"])
         for col, factor in (scale or {}).items():
-            frame[col] = pd.to_numeric(frame[col], errors="coerce") * factor
+            if col in frame.columns:
+                frame[col] = pd.to_numeric(frame[col], errors="coerce") * factor
         if not any(c in frame.columns for c in FORECAST) and all(c in frame.columns for c in WEATHER):
             frame = add_forecast_columns(frame.sort_values("timestamp").reset_index(drop=True))
         super().__init__(frame)
@@ -98,14 +103,18 @@ def parse_open_meteo(air_quality: dict[str, Any], weather: dict[str, Any],
     """
     aq = pd.DataFrame(air_quality["hourly"]).rename(columns={"time": "timestamp", **AQ_VARS})
     wx = pd.DataFrame(weather["hourly"]).rename(columns={"time": "timestamp", **WX_VARS})
+    for col in POLLUTANTS:
+        aq[col] = pd.to_numeric(aq[col], errors="coerce") if col in aq.columns else np.nan
+    for col in WEATHER:
+        wx[col] = pd.to_numeric(wx[col], errors="coerce") if col in wx.columns else np.nan
     for frame in (aq, wx):
-        frame["timestamp"] = pd.to_datetime(frame["timestamp"])
+        frame["timestamp"] = to_utc_naive_dt(frame["timestamp"])
     unit = air_quality.get("hourly_units", {}).get("carbon_monoxide", "μg/m³")
-    if "mg" not in unit:
-        aq["co"] = pd.to_numeric(aq["co"], errors="coerce") / 1000.0
+    if "mg" not in unit.lower():
+        aq["co"] = aq["co"] / 1000.0
     wx = add_forecast_columns(wx.sort_values("timestamp").reset_index(drop=True))
     merged = wx.merge(aq[["timestamp"] + POLLUTANTS], on="timestamp", how="left")
-    merged = merged[merged["timestamp"] <= pd.Timestamp(now)]
+    merged = merged[merged["timestamp"] <= to_utc_naive(now)]
     return merged[["timestamp"] + OBS_COLUMNS]
 
 
@@ -121,16 +130,21 @@ class OpenMeteoSource:
             return json.loads(resp.read().decode("utf-8"))
 
     def fetch(self, since, until) -> pd.DataFrame:
-        until = pd.Timestamp(until)
-        days_back = 92 if since is None else int(np.clip(np.ceil((until - pd.Timestamp(since)).days) + 2, 2, 92))
+        until_ts = to_utc_naive(until)
+        since_ts = to_utc_naive(since) if since is not None else None
+        if since_ts is None:
+            days_back = 92
+        else:
+            delta_days = max(0.0, (until_ts - since_ts).total_seconds() / 86400.0)
+            days_back = int(np.clip(np.ceil(delta_days) + 2, 2, 92))
         common = {"latitude": self.latitude, "longitude": self.longitude, "timezone": "GMT",
                   "past_days": days_back}
         aq = self._get(AQ_URL, {**common, "hourly": ",".join(AQ_VARS), "forecast_days": 1})
         wx = self._get(WX_URL, {**common, "hourly": ",".join(WX_VARS), "forecast_days": 3,
                                 "wind_speed_unit": "ms"})
-        frame = parse_open_meteo(aq, wx, until)
-        if since is not None:
-            frame = frame[frame["timestamp"] > pd.Timestamp(since)]
+        frame = parse_open_meteo(aq, wx, until_ts)
+        if since_ts is not None:
+            frame = frame[frame["timestamp"] > since_ts]
         return frame
 
 

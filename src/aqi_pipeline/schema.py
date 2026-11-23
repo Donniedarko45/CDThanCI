@@ -5,6 +5,8 @@ temperature °C, humidity %, wind speed m/s, precipitation mm per hour.
 """
 from __future__ import annotations
 
+import pandas as pd
+
 POLLUTANTS = ["pm25", "pm10", "no2", "so2", "co", "o3"]
 WEATHER = ["temperature", "humidity", "wind_speed", "precipitation"]
 # Weather expected over the next 24 hours (mean, or total for precipitation),
@@ -28,3 +30,33 @@ BOUNDS = {
 STUCK_COLUMNS = POLLUTANTS + ["temperature", "humidity"]
 
 COLUMN_BIT = {c: i for i, c in enumerate(OBS_COLUMNS)}
+
+
+def to_utc_naive(value) -> pd.Timestamp:
+    """Convert a timestamp-like scalar to a tz-naive UTC Timestamp."""
+    ts = pd.Timestamp(value)
+    if ts.tzinfo is not None:
+        return ts.tz_convert("UTC").tz_localize(None)
+    return ts
+
+
+def to_utc_naive_dt(values) -> pd.DatetimeIndex | pd.Series:
+    """Parse datetime-like values and normalize any tz-aware entries to tz-naive UTC."""
+    is_series = isinstance(values, pd.Series)
+    try:
+        dt = pd.to_datetime(values)
+    except (ValueError, TypeError):
+        dt = pd.to_datetime(values, format="mixed", utc=True)
+    if is_series:
+        if not pd.api.types.is_datetime64_any_dtype(dt):
+            dt = pd.to_datetime(values, format="mixed", utc=True)
+        if isinstance(dt.dtype, pd.DatetimeTZDtype):
+            return dt.dt.tz_convert("UTC").dt.tz_localize(None)
+        return dt
+    if not isinstance(dt, pd.DatetimeIndex):
+        dt = pd.to_datetime(values, format="mixed", utc=True)
+        if not isinstance(dt, pd.DatetimeIndex):
+            dt = pd.DatetimeIndex(dt)
+    if dt.tz is not None:
+        return dt.tz_convert("UTC").tz_localize(None)
+    return dt

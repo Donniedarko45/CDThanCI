@@ -24,9 +24,9 @@ from .performance import cusum_update, daily_ratio, performance_report, safe_mod
 from .policy import Decision, Signals, decide
 from .registry import ModelRegistry
 from .retrain import RetrainOutcome, run_retraining
-from .schema import COLUMN_BIT, CORE_SENSORS, OBS_COLUMNS
+from .schema import COLUMN_BIT, CORE_SENSORS, OBS_COLUMNS, to_utc_naive
 from .sources import Source
-from .store import Store
+from .store import Store, _ts
 from .validation import validate_batch
 
 MONITORED = OBS_COLUMNS + ["aqi"]
@@ -61,6 +61,9 @@ class Pipeline:
     # ------------------------------------------------------------------ ingest
     def ingest(self, now: pd.Timestamp) -> dict[str, Any]:
         """Pull new rows from the source, run the quality gate, store them."""
+        now = to_utc_naive(now)
+        if self.source is None:
+            return {"rows": 0, "status": "no_data", "issues": ["no source configured"]}
         last = self.store.last_observation_time()
         batch = self.source.fetch(last, now)
         if batch.empty:
@@ -76,6 +79,7 @@ class Pipeline:
         return report.to_dict()
 
     def _quality_bad_fraction(self, now: pd.Timestamp) -> float:
+        now = to_utc_naive(now)
         days = self.cfg.retrain.quality_window_days
         raw = self.store.load_observations(now - pd.Timedelta(days=days), now, clean=False)
         if raw.empty:
@@ -90,7 +94,7 @@ class Pipeline:
     # ------------------------------------------------------------------ training
     def bootstrap(self, until: pd.Timestamp) -> str:
         """Load history up to ``until``, train the first model and make it champion."""
-        until = pd.Timestamp(until)
+        until = to_utc_naive(until)
         report = self.ingest(until)
         ds = self._dataset(end=until)
         model, info = select_and_train(ds, self.cfg.model, self.horizon)
@@ -139,6 +143,7 @@ class Pipeline:
     # ------------------------------------------------------------------ forecasts
     def score_matured(self, now: pd.Timestamp) -> int:
         """Attach the true AQI to forecasts whose target time has passed."""
+        now = to_utc_naive(now)
         targets = self.store.unscored_targets(now)
         if not targets:
             return 0
@@ -147,11 +152,12 @@ class Pipeline:
         idx = pd.DatetimeIndex(pd.to_datetime(targets))
         idx = idx[idx.isin(ds.aqi_now.index)]
         labels = pd.DataFrame({"y_true": ds.aqi_now.reindex(idx),
-                               "label_ok": ds.aqi_ok.reindex(idx).fillna(False).astype(int)}, index=idx)
+                               "label_ok": ds.aqi_ok.reindex(idx, fill_value=False).astype(int)}, index=idx)
         return self.store.score_predictions(labels)
 
     def predict(self, now: pd.Timestamp) -> int:
         """Forecast for every hour of data not yet forecast, with champion and shadow."""
+        now = to_utc_naive(now)
         last_obs = self.store.last_observation_time()
         if last_obs is None or self.registry.champion is None:
             return 0
@@ -163,7 +169,7 @@ class Pipeline:
             last_pred = (self.store.last_prediction_time() if role == "champion"
                          else self.store.last_prediction_time(version))
             if role == "shadow" and last_pred is None:
-                last_pred = pd.Timestamp(self._state("probation_start", str(last_obs)))
+                last_pred = to_utc_naive(self._state("probation_start", str(last_obs)))
             start = last_pred if last_pred is not None else last_obs - pd.Timedelta(hours=24)
             if start >= last_obs:
                 continue
@@ -186,9 +192,12 @@ class Pipeline:
         return written
 
     # ------------------------------------------------------------------ monitoring
-    def monitor(self, now: pd.Timestamp) -> dict[str, Any]:
+    def monitor(self, now: pd.Timestamp, advance_state: bool = True) -> dict[str, Any]:
+        now = to_utc_naive(now)
         mcfg = self.cfg.monitor
         champion = self.registry.champion
+        if not champion:
+            raise RuntimeError("no champion model; run bootstrap first")
         meta = self.registry.meta(champion)
 
         obs = self.store.load_observations(now - pd.Timedelta(days=mcfg.drift_window_days + 2), now, clean=True)
@@ -206,27 +215,33 @@ class Pipeline:
         # floor on the expected daily error, so a calm day cannot blow the ratio up
         floor = max(0.25 * float(meta["validation"].get("mae", 10.0)), 1.0)
         ratio = daily_ratio(preds, meta["ref_rel_mae"], now, floor)
-        cusum = cusum_update(self._state("cusum"), ratio, mcfg)
-        self.store.set_state("cusum", cusum)
-
         was_safe = bool(self._state("safe_mode", False))
-        safe, safe_info = safe_mode_update(was_safe, preds, now, mcfg)
-        if safe != was_safe:
-            self.store.set_state("safe_mode", safe)
-            if safe:
-                self.store.log_event(now, "safe_mode_on", "warning",
-                                     f"serving persistence: {champion} MAE {safe_info['model_mae']} vs "
-                                     f"{safe_info['persistence_mae']} for persistence over the last "
-                                     f"{mcfg.safe_window_days} days", safe_info)
-            else:
-                self.store.log_event(now, "safe_mode_off", "info",
-                                     f"serving {champion} again: MAE {safe_info['model_mae']} vs "
-                                     f"{safe_info['persistence_mae']} for persistence", safe_info)
+        if advance_state:
+            cusum = cusum_update(self._state("cusum"), ratio, mcfg)
+            self.store.set_state("cusum", cusum)
 
-        perf_streak = self._state("perf_streak", 0) + 1 if perf["level"] in ("warn", "critical") else 0
-        drift_streak = self._state("drift_streak", 0) + 1 if drift["level"] == "alert" else 0
-        self.store.set_state("perf_streak", perf_streak)
-        self.store.set_state("drift_streak", drift_streak)
+            safe, safe_info = safe_mode_update(was_safe, preds, now, mcfg)
+            if safe != was_safe:
+                self.store.set_state("safe_mode", safe)
+                if safe:
+                    self.store.log_event(now, "safe_mode_on", "warning",
+                                         f"serving persistence: {champion} MAE {safe_info['model_mae']} vs "
+                                         f"{safe_info['persistence_mae']} for persistence over the last "
+                                         f"{mcfg.safe_window_days} days", safe_info)
+                else:
+                    self.store.log_event(now, "safe_mode_off", "info",
+                                         f"serving {champion} again: MAE {safe_info['model_mae']} vs "
+                                         f"{safe_info['persistence_mae']} for persistence", safe_info)
+
+            perf_streak = self._state("perf_streak", 0) + 1 if perf["level"] in ("warn", "critical") else 0
+            drift_streak = self._state("drift_streak", 0) + 1 if drift["level"] == "alert" else 0
+            self.store.set_state("perf_streak", perf_streak)
+            self.store.set_state("drift_streak", drift_streak)
+        else:
+            cusum = self._state("cusum") or {"g": 0.0, "alarm": False}
+            safe = was_safe
+            perf_streak = int(self._state("perf_streak", 0))
+            drift_streak = int(self._state("drift_streak", 0))
         return {"drift": drift, "performance": perf, "cusum": cusum, "daily_ratio": ratio,
                 "safe_mode": safe, "perf_streak": perf_streak, "drift_streak": drift_streak,
                 "quality_bad_fraction": round(self._quality_bad_fraction(now), 4)}
@@ -253,6 +268,7 @@ class Pipeline:
 
     # ------------------------------------------------------------------ retraining
     def retrain(self, now: pd.Timestamp, decision: Decision) -> dict[str, Any]:
+        now = to_utc_naive(now)
         rcfg = self.cfg.retrain
         champion_version = self.registry.champion
         champion_meta = self.registry.meta(champion_version)
@@ -277,7 +293,7 @@ class Pipeline:
             version = self._register(outcome.model, meta, now)
             self.registry.promote(version, now, outcome.reason)
             # a challenger that did not beat persistence on the holdout starts in safe mode
-            safe = bool(outcome.best["rel_mae"] > 1.0)
+            safe = bool(outcome.best["rel_mae"] is not None and outcome.best["rel_mae"] > 1.0)
             for key, value in (("backoff", 1.0), ("tune_next", False), ("cusum", None),
                                ("perf_streak", 0), ("drift_streak", 0),
                                ("probation_start", str(now)), ("safe_mode", safe)):
@@ -297,11 +313,12 @@ class Pipeline:
 
     def probation(self, now: pd.Timestamp) -> dict[str, Any] | None:
         """After the probation period, keep the new champion or roll back to the shadow."""
+        now = to_utc_naive(now)
         shadow = self.registry.shadow
         if not shadow:
             return None
         rcfg = self.cfg.retrain
-        start = pd.Timestamp(self._state("probation_start", str(now)))
+        start = to_utc_naive(self._state("probation_start", str(now)))
         if (now - start) / pd.Timedelta(days=1) < rcfg.probation_days:
             return None
         champion = self.registry.champion
@@ -344,13 +361,15 @@ class Pipeline:
 
     # ------------------------------------------------------------------ the cycle
     def run_cycle(self, now) -> dict[str, Any]:
-        now = pd.Timestamp(now)
+        now = to_utc_naive(now)
         if self.registry.champion is None:
             raise RuntimeError("no champion model; run bootstrap first")
         record: dict[str, Any] = {"quality": self.ingest(now)}
         record["scored"] = self.score_matured(now)
         record["forecasts"] = self.predict(now)
-        mon = self.monitor(now)
+        new_activity = (record["quality"].get("rows", 0) > 0) or (record["scored"] > 0) or (record["forecasts"] > 0)
+        same_hour = self._state("last_cycle_time") == _ts(now)
+        mon = self.monitor(now, advance_state=not (same_hour and not new_activity))
         record.update(mon)
         decision = decide(self._signals(now, mon), self.cfg.retrain)
         record["decision"] = decision.to_dict()
@@ -366,6 +385,7 @@ class Pipeline:
         if probation:
             record["probation"] = probation
         self.store.set_state("last_action", decision.action)
+        self.store.set_state("last_cycle_time", _ts(now))
         record["champion_after"] = self.registry.champion
         record["shadow"] = self.registry.shadow
         self.store.log_cycle(now, record)
