@@ -26,7 +26,7 @@ aqi-pipeline --run-dir runs/demo simulate
 aqi-pipeline --run-dir runs/demo status
 aqi-pipeline --run-dir runs/demo serve        # http://127.0.0.1:8000/ (dashboard), /report, /docs
 
-pytest -q                                      # 65 tests
+pytest -q                                      # 67 tests
 ```
 
 A copy of the demo's output is in `sample_run/` (report and summary) if you only
