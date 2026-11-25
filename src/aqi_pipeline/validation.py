@@ -12,6 +12,7 @@ Raw readings are never altered. Faulty cells are recorded in a per-row bitmask
 (``qc_mask``, one bit per column) and blanked only when data is loaded for
 modelling, so the original values stay available for audit.
 """
+
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
@@ -31,9 +32,9 @@ class QualityReport:
     range_cells: int = 0
     stuck_cells: int = 0
     missing_cells: int = 0
-    bad_fraction: dict[str, float] = field(default_factory=dict)   # per column: faulty or missing
+    bad_fraction: dict[str, float] = field(default_factory=dict)  # per column: faulty or missing
     core_bad_fraction: float = 0.0
-    status: str = "pass"                                           # pass | warn | fail
+    status: str = "pass"  # pass | warn | fail
     issues: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
@@ -53,8 +54,9 @@ def _stuck_mask(values: pd.Series, min_run: int) -> np.ndarray:
     return valid & (run_len >= min_run)
 
 
-def validate_batch(batch: pd.DataFrame, cfg: DataConfig,
-                   context: pd.DataFrame | None = None) -> tuple[pd.DataFrame, QualityReport]:
+def validate_batch(
+    batch: pd.DataFrame, cfg: DataConfig, context: pd.DataFrame | None = None
+) -> tuple[pd.DataFrame, QualityReport]:
     """Check one batch of raw observations.
 
     ``batch`` has a ``timestamp`` column (or DatetimeIndex) plus observation columns.
@@ -135,8 +137,11 @@ def validate_batch(batch: pd.DataFrame, cfg: DataConfig,
                 ctx_vals = pd.to_numeric(ctx_tail[col], errors="coerce").reindex(joined_idx)
                 joined.loc[missing_in_df, col] = ctx_vals.loc[missing_in_df]
     for col in STUCK_COLUMNS:
-        stuck = pd.Series(_stuck_mask(joined[col], cfg.stuck_hours), index=joined.index).reindex(
-            df.index, fill_value=False).to_numpy()
+        stuck = (
+            pd.Series(_stuck_mask(joined[col], cfg.stuck_hours), index=joined.index)
+            .reindex(df.index, fill_value=False)
+            .to_numpy()
+        )
         report.stuck_cells += flag(col, stuck, "stuck")
 
     for i in np.flatnonzero(gap):

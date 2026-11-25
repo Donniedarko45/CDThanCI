@@ -1,4 +1,5 @@
 """End-to-end tests: a short simulated run, the report, the CLI and the HTTP API."""
+
 import json
 
 import pandas as pd
@@ -26,12 +27,22 @@ SIMULATION = {
 @pytest.fixture(scope="module")
 def run(tmp_path_factory):
     run_dir = tmp_path_factory.mktemp("run")
-    cfg = load_config(overrides={
-        "run_dir": str(run_dir), "simulation": SIMULATION,
-        "model": {"hgb_params": {"learning_rate": 0.1, "max_iter": 60, "max_leaf_nodes": 15,
-                                 "min_samples_leaf": 40, "l2_regularization": 1.0}},
-        "retrain": {"tune_iterations": 1},
-    })
+    cfg = load_config(
+        overrides={
+            "run_dir": str(run_dir),
+            "simulation": SIMULATION,
+            "model": {
+                "hgb_params": {
+                    "learning_rate": 0.1,
+                    "max_iter": 60,
+                    "max_leaf_nodes": 15,
+                    "min_samples_leaf": 40,
+                    "l2_regularization": 1.0,
+                }
+            },
+            "retrain": {"tune_iterations": 1},
+        }
+    )
     summary = run_simulation(cfg, verbose=False)
     return cfg, summary
 
@@ -53,9 +64,11 @@ def test_sensor_fault_puts_retraining_on_hold_and_is_excluded_from_scoring(run):
     assert cycles["2025-07-10"]["decision"]["action"] == "hold"
     assert cycles["2025-07-10"]["quality"]["stuck_cells"] == 24
     preds = pipe.store.load_predictions("2025-07-09", "2025-07-11", role="champion", by="made_at")
-    assert (preds["input_ok"] == 0).all()                    # forecasts made from the stuck sensor are flagged
-    assert not any(e["kind"] in ("promotion", "retrain_rejected") and "2025-07-08" <= e["ts"][:10] <= "2025-07-13"
-                   for e in pipe.store.load_events())
+    assert (preds["input_ok"] == 0).all()  # forecasts made from the stuck sensor are flagged
+    assert not any(
+        e["kind"] in ("promotion", "retrain_rejected") and "2025-07-08" <= e["ts"][:10] <= "2025-07-13"
+        for e in pipe.store.load_events()
+    )
 
 
 def test_upstream_change_is_detected_and_handled(run):
@@ -74,14 +87,14 @@ def test_upstream_change_is_detected_and_handled(run):
 
 def test_state_is_consistent_after_the_run(run):
     cfg, summary = run
-    pipe = Pipeline(cfg)                                     # a fresh process sees the same state
+    pipe = Pipeline(cfg)  # a fresh process sees the same state
     stages = [v["stage"] for v in pipe.registry.versions()]
     assert stages.count("champion") == 1
     assert pipe.registry.champion in {v["version"] for v in summary["versions"]}
     served = pipe.store.load_predictions(role="champion", by="made_at")
-    assert served["made_at"].is_unique                       # exactly one served forecast per hour
+    assert served["made_at"].is_unique  # exactly one served forecast per hour
     matured = served[served["target_time"] <= pipe.store.last_observation_time()]
-    assert matured["label_ok"].notna().all()                 # every matured forecast has been scored
+    assert matured["label_ok"].notna().all()  # every matured forecast has been scored
     assert pd.Timestamp(served["made_at"].max()) == pipe.store.last_observation_time()
 
 
@@ -89,8 +102,18 @@ def test_running_a_cycle_twice_changes_nothing(run):
     cfg, _ = run
     from aqi_pipeline.sources import FrameSource
     from aqi_pipeline.synthetic import generate
-    pipe = Pipeline(cfg, FrameSource(generate(SIMULATION["history_start"], SIMULATION["production_end"],
-                                              seed=SIMULATION["seed"], events=SIMULATION["events"])))
+
+    pipe = Pipeline(
+        cfg,
+        FrameSource(
+            generate(
+                SIMULATION["history_start"],
+                SIMULATION["production_end"],
+                seed=SIMULATION["seed"],
+                events=SIMULATION["events"],
+            )
+        ),
+    )
     before = len(pipe.store.load_predictions())
     record = pipe.run_cycle(pipe.store.last_observation_time())
     assert record["quality"]["status"] == "no_data" and record["forecasts"] == 0
@@ -111,6 +134,7 @@ def test_report_is_self_contained(run, tmp_path):
 def test_cli_status_and_report(run, tmp_path, capsys):
     cfg, _ = run
     from aqi_pipeline.cli import main
+
     assert main(["--run-dir", cfg.run_dir, "status"]) == 0
     status = json.loads(capsys.readouterr().out)
     assert status["champion"].startswith("v") and status["decision"] in {"none", "watch", "hold", "retrain"}
@@ -119,10 +143,11 @@ def test_cli_status_and_report(run, tmp_path, capsys):
 
 
 def test_api(run, monkeypatch):
-    fastapi = pytest.importorskip("fastapi")
+    pytest.importorskip("fastapi")
     from fastapi.testclient import TestClient
 
     from aqi_pipeline.api import app
+
     cfg, _ = run
     monkeypatch.setenv("AQI_RUN_DIR", cfg.run_dir)
     client = TestClient(app)
@@ -141,19 +166,111 @@ def test_api(run, monkeypatch):
     assert len(client.get("/events", params={"limit": 5}).json()) == 5
 
     obs = Pipeline(cfg).store.load_observations(clean=False).tail(24 * 9).reset_index()
-    rows = json.loads(obs.drop(columns=["qc_mask", "qc_notes"]).assign(
-        timestamp=obs["timestamp"].astype(str)).to_json(orient="records"))
+    rows = json.loads(
+        obs.drop(columns=["qc_mask", "qc_notes"])
+        .assign(timestamp=obs["timestamp"].astype(str))
+        .to_json(orient="records")
+    )
     scored = client.post("/predict", json={"observations": rows}).json()
     assert 0 <= scored["aqi"] <= 500 and scored["champion"] == health["champion"]
     assert client.post("/predict", json={"observations": rows[:5]}).status_code == 422
+
+    # /api/config returns sanitized config and runtime telemetry
+    cfg_res = client.get("/api/config")
+    assert cfg_res.status_code == 200
+    cfg_body = cfg_res.json()
+    assert cfg_body["bootstrapped"] is True and cfg_body["champion"] == health["champion"]
+    assert cfg_body["db_exists"] is True and cfg_body["db_size_bytes"] > 0
+    assert cfg_body["cycle_count"] == 45 and cfg_body["version_count"] >= 1
+    assert cfg_body["data"]["horizon_hours"] == 24 and cfg_body["python_version"]
+
+    # /api/analytics returns category counts, monthly MAE, feature importance, drift history, and 7 stages
+    ana_res = client.get("/api/analytics")
+    assert ana_res.status_code == 200
+    ana = json.loads(ana_res.text, parse_constant=lambda c: (_ for _ in ()).throw(AssertionError(c)))
+    assert ana["bootstrapped"] is True and ana["champion"] == health["champion"]
+    assert sum(ana["category_counts"]["actual"].values()) > 0
+    assert sum(ana["category_counts"]["served"].values()) > 0
+    assert len(ana["monthly_mae"]) >= 1 and len(ana["feature_importance"]) > 0
+    assert len(ana["version_metrics"]) == cfg_body["version_count"]
+    assert sum(ana["decision_counts"].values()) == 45
+    assert len(ana["drift_history"]) == 45
+    assert [s["id"] for s in ana["pipeline_stages"]] == [
+        "ingest",
+        "quality",
+        "forecast",
+        "monitor",
+        "decide",
+        "retrain",
+        "registry",
+    ]
+
+    # /predict/batch supports JSON observations (24..240 cap) and CSV with columns/scale
+    obs_long = Pipeline(cfg).store.load_observations(clean=False).tail(270).reset_index()
+    rows_long = json.loads(
+        obs_long.drop(columns=["qc_mask", "qc_notes"])
+        .assign(timestamp=obs_long["timestamp"].astype(str))
+        .to_json(orient="records")
+    )
+    batch_res = client.post("/predict/batch", json={"observations": rows_long})
+    assert batch_res.status_code == 200
+    batch = batch_res.json()
+    assert batch["champion"] == health["champion"]
+    assert batch["count"] == 240
+    assert batch["summary"]["min_aqi"] <= batch["summary"]["mean_aqi"] <= batch["summary"]["max_aqi"]
+    assert sum(batch["summary"]["category_counts"].values()) == batch["count"]
+
+    csv_df = obs.tail(72).drop(columns=["qc_mask", "qc_notes"]).copy()
+    csv_df["co"] = csv_df["co"] * 1000.0
+    csv_df = csv_df.rename(columns={"timestamp": "dt", "pm25": "PM25", "co": "CO_ug"})
+    csv_res = client.post(
+        "/predict/batch",
+        json={
+            "csv": csv_df.to_csv(index=False),
+            "columns": {"timestamp": "dt", "pm25": "PM25", "co": "CO_ug"},
+            "scale": {"co": 0.001},
+        },
+    )
+    assert csv_res.status_code == 200
+    assert csv_res.json()["count"] == 72 - 23
+    assert client.post("/predict/batch", json={"observations": rows[:10]}).status_code == 422
+    assert client.post("/predict/batch", json={}).status_code == 422
+
+
+def test_api_config_masks_secrets_and_handles_empty_run_dir(tmp_path, monkeypatch):
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    from aqi_pipeline.api import app
+
+    cfg_path = tmp_path / "secret.yaml"
+    run_dir = tmp_path / "empty_run"
+    cfg_path.write_text(
+        f"run_dir: {run_dir}\nsource:\n  type: csv\n  path: station.csv\n  api_key: super-secret\n  token: abc\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("AQI_CONFIG", str(cfg_path))
+    monkeypatch.delenv("AQI_RUN_DIR", raising=False)
+    client = TestClient(app)
+
+    cfg_body = client.get("/api/config").json()
+    assert cfg_body["bootstrapped"] is False and cfg_body["champion"] is None
+    assert cfg_body["source"]["api_key"] == "***" and cfg_body["source"]["token"] == "***"
+    assert cfg_body["source"]["path"] == "station.csv"
+
+    ana_body = client.get("/api/analytics").json()
+    assert ana_body["bootstrapped"] is False and ana_body["drift_history"] == []
+    assert all(s["status"] == "empty" for s in ana_body["pipeline_stages"])
 
 
 def test_csv_source_bootstrap_and_cycle_through_the_cli(tmp_path, capsys):
     """The real-data path: a station CSV with its own column names and CO in µg/m³."""
     from aqi_pipeline.cli import main
     from aqi_pipeline.synthetic import generate
+
     data = generate("2025-03-01", "2025-07-10", seed=9).drop(
-        columns=["fc_temperature", "fc_humidity", "fc_wind_speed", "fc_precipitation"])
+        columns=["fc_temperature", "fc_humidity", "fc_wind_speed", "fc_precipitation"]
+    )
     data["co"] = data["co"] * 1000.0
     data = data.rename(columns={"timestamp": "Datetime", "pm25": "PM2.5", "pm10": "PM10", "co": "CO"})
     csv = tmp_path / "station.csv"
@@ -163,14 +280,15 @@ def test_csv_source_bootstrap_and_cycle_through_the_cli(tmp_path, capsys):
         f"location: Test station\nrun_dir: {tmp_path / 'run'}\n"
         f"source:\n  type: csv\n  path: {csv}\n"
         "  columns: {timestamp: Datetime, pm25: PM2.5, pm10: PM10, co: CO}\n  scale: {co: 0.001}\n"
-        "model:\n  candidates: [ridge]\n")
+        "model:\n  candidates: [ridge]\n"
+    )
     assert main(["--config", str(config), "bootstrap", "--until", "2025-07-01"]) == 0
     assert "v001" in capsys.readouterr().out
     for now in ("2025-07-02 00:00", "2025-07-03 00:00", "2025-07-04 00:00"):
         assert main(["--config", str(config), "run-cycle", "--now", now]) == 0
     pipe = Pipeline(load_config(config))
     obs = pipe.store.load_observations()
-    assert obs["co"].median() < 5 and obs["fc_wind_speed"].notna().mean() > 0.9   # units converted, forecasts built
+    assert obs["co"].median() < 5 and obs["fc_wind_speed"].notna().mean() > 0.9  # units converted, forecasts built
     served = pipe.store.load_predictions(role="champion", by="made_at")
-    assert len(served) == 72 and served["y_true"].notna().sum() >= 47            # 3 days served, 2 matured
+    assert len(served) == 72 and served["y_true"].notna().sum() >= 47  # 3 days served, 2 matured
     assert len(pipe.store.load_cycles()) == 3

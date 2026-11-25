@@ -6,6 +6,7 @@ PM2.5, PM10, NO2 and SO2 use 24-hour running means (at least 16 valid hours);
 CO and O3 use 8-hour running means. An AQI is reported only when at least three
 sub-indices are available and one of them is PM2.5 or PM10.
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -20,12 +21,16 @@ BREAKPOINTS = {
     "pm10": [0, 50, 100, 250, 350, 430, 510],
     "no2": [0, 40, 80, 180, 280, 400, 520],
     "so2": [0, 40, 80, 380, 800, 1600, 2400],
-    "co": [0, 1.0, 2.0, 10, 17, 34, 51],          # mg/m³
+    "co": [0, 1.0, 2.0, 10, 17, 34, 51],  # mg/m³
     "o3": [0, 50, 100, 168, 208, 748, 1288],
 }
 AVERAGING = {  # pollutant -> (window, minimum valid hours)
-    "pm25": ("24h", 16), "pm10": ("24h", 16), "no2": ("24h", 16), "so2": ("24h", 16),
-    "co": ("8h", 6), "o3": ("8h", 6),
+    "pm25": ("24h", 16),
+    "pm10": ("24h", 16),
+    "no2": ("24h", 16),
+    "so2": ("24h", 16),
+    "co": ("8h", 6),
+    "o3": ("8h", 6),
 }
 CATEGORIES = ["Good", "Satisfactory", "Moderate", "Poor", "Very poor", "Severe"]
 CATEGORY_EDGES = [50, 100, 200, 300, 400]

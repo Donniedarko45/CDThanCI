@@ -1,4 +1,5 @@
 """Unit tests for the building blocks: AQI, data quality, features, drift, policy, registry."""
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -30,10 +31,19 @@ def test_sub_index_matches_cpcb_worked_example():
     assert aqi.sub_index("pm25", 150)[()] == pytest.approx(323.08, abs=0.01)
 
 
-@pytest.mark.parametrize("pollutant,conc,expected", [
-    ("pm25", 30, 50), ("pm25", 60, 100), ("pm10", 250, 200), ("no2", 80, 100),
-    ("co", 2.0, 100), ("o3", 168, 200), ("so2", 380, 200), ("pm10", 430, 400),
-])
+@pytest.mark.parametrize(
+    "pollutant,conc,expected",
+    [
+        ("pm25", 30, 50),
+        ("pm25", 60, 100),
+        ("pm10", 250, 200),
+        ("no2", 80, 100),
+        ("co", 2.0, 100),
+        ("o3", 168, 200),
+        ("so2", 380, 200),
+        ("pm10", 430, 400),
+    ],
+)
 def test_sub_index_at_breakpoints(pollutant, conc, expected):
     assert aqi.sub_index(pollutant, conc)[()] == pytest.approx(expected)
 
@@ -49,7 +59,7 @@ def test_aqi_is_highest_sub_index_and_needs_three_pollutants_with_pm():
     out = aqi.compute_aqi(obs)
     assert out["aqi"].iloc[-1] == pytest.approx(323.1, abs=0.1)
     assert out["dominant"].iloc[-1] == "pm25"
-    assert out["aqi"].iloc[:15].isna().all()          # fewer than 16 hours of data
+    assert out["aqi"].iloc[:15].isna().all()  # fewer than 16 hours of data
     no_pm = obs.assign(pm25=np.nan, pm10=np.nan)
     assert aqi.compute_aqi(no_pm)["aqi"].isna().all()
     two_only = obs[["pm25", "no2"]]
@@ -59,16 +69,16 @@ def test_aqi_is_highest_sub_index_and_needs_three_pollutants_with_pm():
 # ---------------------------------------------------------------- data quality
 def test_quality_gate_flags_stuck_range_gaps_and_duplicates(data):
     batch = data.iloc[200:272].copy()
-    batch.iloc[10:20, batch.columns.get_loc("pm25")] = 77.7            # stuck for 10 hours
-    batch.iloc[30, batch.columns.get_loc("no2")] = -999.0             # logger error code
-    batch = pd.concat([batch.drop(batch.index[40:43]), batch.iloc[[5]]])   # 3-hour gap and a duplicate
+    batch.iloc[10:20, batch.columns.get_loc("pm25")] = 77.7  # stuck for 10 hours
+    batch.iloc[30, batch.columns.get_loc("no2")] = -999.0  # logger error code
+    batch = pd.concat([batch.drop(batch.index[40:43]), batch.iloc[[5]]])  # 3-hour gap and a duplicate
     clean, report = validate_batch(batch, DataConfig())
     assert len(clean) == 72 and report.gap_rows == 3 and report.duplicates == 1
     assert report.stuck_cells == 10 and report.range_cells == 1
     assert report.status == "warn"
     masked = apply_mask(clean)
     assert masked["pm25"].iloc[10:20].isna().all() and np.isnan(masked["no2"].iloc[30])
-    assert clean["pm25"].iloc[12] == 77.7                              # raw value kept for audit
+    assert clean["pm25"].iloc[12] == 77.7  # raw value kept for audit
     assert (clean["qc_mask"].iloc[10:20] & (1 << COLUMN_BIT["pm25"])).all()
 
 
@@ -82,7 +92,7 @@ def test_quality_gate_fails_batch_when_core_sensor_is_mostly_bad(data):
 def test_stuck_sensor_is_caught_across_batches(data):
     frozen = data.iloc[400:430].copy()
     frozen["pm25"] = 42.0
-    first, _ = validate_batch(frozen.iloc[:4], DataConfig())             # too short to tell
+    first, _ = validate_batch(frozen.iloc[:4], DataConfig())  # too short to tell
     assert first["qc_mask"].sum() == 0
     context = first.drop(columns=["qc_mask", "qc_notes"])
     second, report = validate_batch(frozen.iloc[4:10], DataConfig(), context=context)
@@ -121,7 +131,7 @@ def test_model_round_trip_beats_nothing_on_trivial_target(data):
     model = ForecastModel("ridge", {"alpha": 1.0}).fit(ds.X.loc[rows], ds.y.loc[rows], ds.aqi_now.loc[rows])
     pred = model.predict(ds.X.loc[rows], ds.aqi_now.loc[rows])
     assert pred.min() >= 0 and pred.max() <= 500
-    assert score(ds.y.loc[rows], pred, ds.aqi_now.loc[rows])["rel_mae"] < 1.0   # in-sample, beats persistence
+    assert score(ds.y.loc[rows], pred, ds.aqi_now.loc[rows])["rel_mae"] < 1.0  # in-sample, beats persistence
 
 
 # ---------------------------------------------------------------- drift
@@ -151,7 +161,7 @@ def test_drift_report_flags_shift_and_novelty(data):
     thresholds = calibrate_thresholds(ref, list(ref.columns), cfg)
     assert all(v >= cfg.psi_floor for v in thresholds.values())
     importance = {"pm25": 0.6, "wind_speed": 0.3, "temperature": 0.1}
-    window["pm25"] = window["pm25"] * 8 + 400                   # far outside anything in the reference
+    window["pm25"] = window["pm25"] * 8 + 400  # far outside anything in the reference
     report = drift_report(ref, window, thresholds, importance, cfg)
     assert "pm25" in report["drifted"] and report["columns"]["pm25"]["novel"] == 1.0
     assert report["score"] >= 0.6 and report["level"] == "alert"
@@ -160,9 +170,17 @@ def test_drift_report_flags_shift_and_novelty(data):
 # ---------------------------------------------------------------- performance signals
 def _preds(n, err_model, err_naive, end="2026-01-10"):
     t = pd.date_range(end=end, periods=n, freq="h")
-    return pd.DataFrame({"target_time": t, "y_true": 100.0, "y_model": 100.0 + err_model,
-                         "y_pred": 100.0 + err_model, "y_naive": 100.0 + err_naive,
-                         "label_ok": 1, "input_ok": 1})
+    return pd.DataFrame(
+        {
+            "target_time": t,
+            "y_true": 100.0,
+            "y_model": 100.0 + err_model,
+            "y_pred": 100.0 + err_model,
+            "y_naive": 100.0 + err_naive,
+            "label_ok": 1,
+            "input_ok": 1,
+        }
+    )
 
 
 def test_performance_levels():
@@ -172,14 +190,14 @@ def test_performance_levels():
     bad = performance_report(_preds(168, 12, 10), 0.6, cfg, 168)
     assert bad["level"] == "critical" and bad["ratio"] == pytest.approx(2.0)
     sparse = performance_report(_preds(40, 12, 10), 0.6, cfg, 168)
-    assert sparse["level"] == "unknown"                      # too little clean data to judge
+    assert sparse["level"] == "unknown"  # too little clean data to judge
 
 
 def test_faulty_rows_do_not_count_against_the_model():
     cfg = MonitorConfig()
     preds = _preds(168, 6, 10)
     preds.loc[:60, "y_model"] = 400.0
-    preds.loc[:60, "input_ok"] = 0                           # these forecasts came from flagged inputs
+    preds.loc[:60, "input_ok"] = 0  # these forecasts came from flagged inputs
     assert performance_report(preds, 0.6, cfg, 168)["level"] == "ok"
 
 
@@ -187,7 +205,7 @@ def test_cusum_accumulates_only_sustained_excess():
     cfg = MonitorConfig()
     state = None
     for _ in range(30):
-        state = cusum_update(state, 1.1, cfg)                # within the slack: never alarms
+        state = cusum_update(state, 1.1, cfg)  # within the slack: never alarms
     assert state["g"] == 0 and not state["alarm"]
     for _ in range(8):
         state = cusum_update(state, 1.9, cfg)
@@ -200,36 +218,55 @@ def test_safe_mode_enters_and_leaves():
     active, info = safe_mode_update(False, _preds(72, 20, 10), now, cfg)
     assert active and info["ratio"] == pytest.approx(2.0)
     active, _ = safe_mode_update(True, _preds(72, 11, 10), now, cfg)
-    assert active                                            # still worse than persistence: stay
+    assert active  # still worse than persistence: stay
     active, _ = safe_mode_update(True, _preds(72, 8, 10), now, cfg)
     assert not active
 
 
 # ---------------------------------------------------------------- policy
 def _signals(**kw):
-    base = dict(quality_bad_fraction=0.0, drift_level="ok", drift_streak=0, perf_level="ok", perf_streak=0,
-                cusum_alarm=False, days_since_attempt=30.0, cooldown_days=5.0, base_cooldown_days=5.0,
-                model_age_days=30.0, age_limit_days=60.0, in_probation=False, labelled_days_since_training=29.0)
+    base = dict(
+        quality_bad_fraction=0.0,
+        drift_level="ok",
+        drift_streak=0,
+        perf_level="ok",
+        perf_streak=0,
+        cusum_alarm=False,
+        days_since_attempt=30.0,
+        cooldown_days=5.0,
+        base_cooldown_days=5.0,
+        model_age_days=30.0,
+        age_limit_days=60.0,
+        in_probation=False,
+        labelled_days_since_training=29.0,
+    )
     return Signals(**{**base, **kw})
 
 
-@pytest.mark.parametrize("kwargs,action,trigger", [
-    ({}, "none", ""),
-    ({"quality_bad_fraction": 0.4, "perf_level": "critical", "perf_streak": 5}, "hold", ""),
-    ({"perf_level": "critical", "perf_streak": 2}, "retrain", "performance"),
-    ({"perf_level": "critical", "perf_streak": 1}, "watch", ""),
-    ({"perf_level": "warn", "perf_streak": 3, "drift_level": "warn"}, "retrain", "performance+drift"),
-    ({"perf_level": "warn", "perf_streak": 3}, "watch", ""),
-    ({"drift_level": "alert", "drift_streak": 2}, "watch", ""),
-    ({"drift_level": "alert", "drift_streak": 5}, "retrain", "drift"),
-    ({"cusum_alarm": True}, "retrain", "slow_decay"),
-    ({"model_age_days": 61.0, "days_since_attempt": 61.0}, "retrain", "scheduled"),
-    ({"perf_level": "critical", "perf_streak": 4, "in_probation": True}, "watch", ""),
-    ({"cusum_alarm": True, "days_since_attempt": 2.0}, "watch", ""),
-    # back-off does not delay a retrain when accuracy has collapsed
-    ({"perf_level": "critical", "perf_streak": 3, "days_since_attempt": 6.0, "cooldown_days": 20.0}, "retrain", "performance"),
-    ({"cusum_alarm": True, "days_since_attempt": 6.0, "cooldown_days": 20.0}, "watch", ""),
-])
+@pytest.mark.parametrize(
+    "kwargs,action,trigger",
+    [
+        ({}, "none", ""),
+        ({"quality_bad_fraction": 0.4, "perf_level": "critical", "perf_streak": 5}, "hold", ""),
+        ({"perf_level": "critical", "perf_streak": 2}, "retrain", "performance"),
+        ({"perf_level": "critical", "perf_streak": 1}, "watch", ""),
+        ({"perf_level": "warn", "perf_streak": 3, "drift_level": "warn"}, "retrain", "performance+drift"),
+        ({"perf_level": "warn", "perf_streak": 3}, "watch", ""),
+        ({"drift_level": "alert", "drift_streak": 2}, "watch", ""),
+        ({"drift_level": "alert", "drift_streak": 5}, "retrain", "drift"),
+        ({"cusum_alarm": True}, "retrain", "slow_decay"),
+        ({"model_age_days": 61.0, "days_since_attempt": 61.0}, "retrain", "scheduled"),
+        ({"perf_level": "critical", "perf_streak": 4, "in_probation": True}, "watch", ""),
+        ({"cusum_alarm": True, "days_since_attempt": 2.0}, "watch", ""),
+        # back-off does not delay a retrain when accuracy has collapsed
+        (
+            {"perf_level": "critical", "perf_streak": 3, "days_since_attempt": 6.0, "cooldown_days": 20.0},
+            "retrain",
+            "performance",
+        ),
+        ({"cusum_alarm": True, "days_since_attempt": 6.0, "cooldown_days": 20.0}, "watch", ""),
+    ],
+)
 def test_policy_decision_table(kwargs, action, trigger):
     decision = decide(_signals(**kwargs), RetrainConfig())
     assert (decision.action, decision.trigger) == (action, trigger)
@@ -260,7 +297,7 @@ def test_registry_promote_shadow_and_rollback(tmp_path):
     stages = {v["version"]: v["stage"] for v in reg.versions()}
     assert stages == {v1: "champion", v2: "rolled_back"}
     assert [h["action"] for h in reg.history()] == ["register", "promote", "register", "promote", "rollback"]
-    assert ModelRegistry(tmp_path / "registry").champion == v1          # state survives a restart
+    assert ModelRegistry(tmp_path / "registry").champion == v1  # state survives a restart
     with pytest.raises(RuntimeError):
         reg.rollback("2026-02-09", "no shadow left")
 
@@ -291,18 +328,34 @@ def test_config_overrides_and_unknown_keys(tmp_path):
 
 def test_open_meteo_parser_converts_units_and_builds_forecast_columns():
     hours = pd.date_range("2026-01-01", periods=96, freq="h").strftime("%Y-%m-%dT%H:%M").tolist()
-    air = {"hourly_units": {"carbon_monoxide": "μg/m³"},
-           "hourly": {"time": hours[:72], "pm2_5": [50.0] * 72, "pm10": [90.0] * 72, "nitrogen_dioxide": [30.0] * 72,
-                      "sulphur_dioxide": [8.0] * 72, "carbon_monoxide": [800.0] * 72, "ozone": [40.0] * 72}}
-    weather = {"hourly": {"time": hours, "temperature_2m": [20.0] * 96, "relative_humidity_2m": [50.0] * 96,
-                          "wind_speed_10m": [2.0] * 48 + [6.0] * 48, "precipitation": [0.0] * 96}}
+    air = {
+        "hourly_units": {"carbon_monoxide": "μg/m³"},
+        "hourly": {
+            "time": hours[:72],
+            "pm2_5": [50.0] * 72,
+            "pm10": [90.0] * 72,
+            "nitrogen_dioxide": [30.0] * 72,
+            "sulphur_dioxide": [8.0] * 72,
+            "carbon_monoxide": [800.0] * 72,
+            "ozone": [40.0] * 72,
+        },
+    }
+    weather = {
+        "hourly": {
+            "time": hours,
+            "temperature_2m": [20.0] * 96,
+            "relative_humidity_2m": [50.0] * 96,
+            "wind_speed_10m": [2.0] * 48 + [6.0] * 48,
+            "precipitation": [0.0] * 96,
+        }
+    }
     frame = parse_open_meteo(air, weather, pd.Timestamp("2026-01-03 12:00"))
     assert list(frame.columns) == ["timestamp"] + OBS_COLUMNS
     assert frame["timestamp"].max() == pd.Timestamp("2026-01-03 12:00")
-    assert frame["co"].iloc[0] == pytest.approx(0.8)                     # µg/m³ -> mg/m³
+    assert frame["co"].iloc[0] == pytest.approx(0.8)  # µg/m³ -> mg/m³
     at = frame.set_index("timestamp")
     assert at.loc["2026-01-01 00:00", "fc_wind_speed"] == pytest.approx(2.0)
-    assert at.loc["2026-01-02 23:00", "fc_wind_speed"] == pytest.approx(6.0)   # looks into the forecast hours
+    assert at.loc["2026-01-02 23:00", "fc_wind_speed"] == pytest.approx(6.0)  # looks into the forecast hours
 
 
 # ---------------------------------------------------------------- edge cases & regressions
@@ -342,9 +395,12 @@ def test_validate_batch_handles_tz_aware_timestamps_empty_and_overlapping_contex
     batch["pm25"] = 55.0
     # Mix UTC Z and +05:30 offsets (05:30+05:30 == 00:00Z)
     ts_utc = pd.to_datetime(batch["timestamp"]).dt.tz_localize("UTC")
-    iso_mixed = [t.strftime("%Y-%m-%dT%H:%M:%SZ") if i % 2 == 0
-                 else t.tz_convert("Asia/Kolkata").strftime("%Y-%m-%dT%H:%M:%S+05:30")
-                 for i, t in enumerate(ts_utc)]
+    iso_mixed = [
+        t.strftime("%Y-%m-%dT%H:%M:%SZ")
+        if i % 2 == 0
+        else t.tz_convert("Asia/Kolkata").strftime("%Y-%m-%dT%H:%M:%S+05:30")
+        for i, t in enumerate(ts_utc)
+    ]
     first = batch.iloc[:4].assign(timestamp=iso_mixed[:4])
     ctx, _ = validate_batch(first, DataConfig())
     assert ctx.index.tz is None
@@ -355,7 +411,9 @@ def test_validate_batch_handles_tz_aware_timestamps_empty_and_overlapping_contex
 
     # Context extending past batch end should not misalign stuck mask
     ctx_full, _ = validate_batch(batch.iloc[:8], DataConfig())
-    sub, sub_report = validate_batch(batch.iloc[:2], DataConfig(), context=ctx_full.drop(columns=["qc_mask", "qc_notes"]))
+    sub, sub_report = validate_batch(
+        batch.iloc[:2], DataConfig(), context=ctx_full.drop(columns=["qc_mask", "qc_notes"])
+    )
     assert len(sub) == 2 and sub_report.stuck_cells == 2
 
     empty_batch = batch.iloc[0:0].copy()
@@ -377,12 +435,27 @@ def test_open_meteo_fetch_days_back_and_null_columns(monkeypatch):
         seen_params.append(params)
         hours = pd.date_range("2026-01-01", periods=48, freq="h").strftime("%Y-%m-%dT%H:%M").tolist()
         if "air-quality" in url:
-            return {"hourly_units": {"carbon_monoxide": "μg/m³"},
-                    "hourly": {"time": hours, "pm2_5": [None] * 48, "pm10": [20.0] * 48,
-                               "nitrogen_dioxide": [10.0] * 48, "sulphur_dioxide": [5.0] * 48,
-                               "carbon_monoxide": [500.0] * 48, "ozone": [30.0] * 48}}
-        return {"hourly": {"time": hours, "temperature_2m": [None] * 48, "relative_humidity_2m": [50.0] * 48,
-                           "wind_speed_10m": [2.0] * 48, "precipitation": [0.0] * 48}}
+            return {
+                "hourly_units": {"carbon_monoxide": "μg/m³"},
+                "hourly": {
+                    "time": hours,
+                    "pm2_5": [None] * 48,
+                    "pm10": [20.0] * 48,
+                    "nitrogen_dioxide": [10.0] * 48,
+                    "sulphur_dioxide": [5.0] * 48,
+                    "carbon_monoxide": [500.0] * 48,
+                    "ozone": [30.0] * 48,
+                },
+            }
+        return {
+            "hourly": {
+                "time": hours,
+                "temperature_2m": [None] * 48,
+                "relative_humidity_2m": [50.0] * 48,
+                "wind_speed_10m": [2.0] * 48,
+                "precipitation": [0.0] * 48,
+            }
+        }
 
     monkeypatch.setattr(OpenMeteoSource, "_get", fake_get)
     src = OpenMeteoSource(28.61, 77.21)
@@ -394,11 +467,13 @@ def test_open_meteo_fetch_days_back_and_null_columns(monkeypatch):
 
 def test_features_and_modeling_empty_and_all_nan_features(data):
     import warnings
+
     empty_obs = pd.DataFrame(columns=OBS_COLUMNS, index=pd.DatetimeIndex([], dtype="datetime64[ns]"))
     ds_empty = build_dataset(empty_obs)
     assert ds_empty.X.empty and ds_empty.y.empty and ds_empty.usable().empty
 
     from aqi_pipeline.modeling import backtest
+
     with pytest.raises(ValueError, match="not enough history"):
         backtest(ds_empty, "ridge", {"alpha": 1.0}, load_config().model)
 
@@ -417,9 +492,13 @@ def test_features_and_modeling_empty_and_all_nan_features(data):
 
 def test_drift_performance_and_retrain_edge_cases(data):
     from aqi_pipeline.retrain import run_retraining
+
     cfg = MonitorConfig()
     empty_ref = pd.DataFrame(columns=["pm25", "temperature"], index=pd.DatetimeIndex([], dtype="datetime64[ns]"))
-    assert calibrate_thresholds(empty_ref, ["pm25", "temperature"], cfg) == {"pm25": cfg.psi_floor, "temperature": cfg.psi_floor}
+    assert calibrate_thresholds(empty_ref, ["pm25", "temperature"], cfg) == {
+        "pm25": cfg.psi_floor,
+        "temperature": cfg.psi_floor,
+    }
 
     rep = drift_report(empty_ref, empty_ref, {"pm25": cfg.psi_floor}, {"pm25": 1.0}, cfg)
     assert rep["level"] == "ok" and rep["window_rows"] == 0
@@ -450,6 +529,7 @@ def test_drift_performance_and_retrain_edge_cases(data):
 def test_store_json_sanitization_concurrent_access_and_registry_atomic_meta(tmp_path):
     import json
     from concurrent.futures import ThreadPoolExecutor
+
     store = Store(tmp_path / "p.db")
     assert store.load_observations(clean=True).empty
     with pytest.raises(ValueError):
@@ -479,7 +559,9 @@ def test_store_json_sanitization_concurrent_access_and_registry_atomic_meta(tmp_
     # Verify Windows UNC SQLite URI generation (e.g. \\wsl.localhost\...)
     import os
     from pathlib import Path
+
     from aqi_pipeline.store import _sqlite_target
+
     if os.name == "nt":
         target, is_unc, _ = _sqlite_target(Path(r"\\wsl.localhost\Ubuntu\home\test dir\p#1.db"))
         assert is_unc and target == "file:////wsl.localhost/Ubuntu/home/test%20dir/p%231.db?nolock=1"
@@ -489,7 +571,12 @@ def test_store_json_sanitization_concurrent_access_and_registry_atomic_meta(tmp_
 
     reg = ModelRegistry(tmp_path / "reg")
     ref = pd.DataFrame({"x": [1.0]}, index=pd.DatetimeIndex(["2026-01-01"]))
-    v1 = reg.register(ForecastModel("ridge", {}), {"kind": "ridge", "trigger": "initial"}, ref, "2026-01-01T05:30:00+05:30")
+    v1 = reg.register(
+        ForecastModel("ridge", {}),
+        {"kind": "ridge", "trigger": "initial"},
+        ref,
+        "2026-01-01T05:30:00+05:30",
+    )
     reg.update_meta(v1, {"extra": float("nan")})
     assert reg.meta(v1)["registered_at"] == "2026-01-01 00:00:00"
     assert reg.meta(v1)["extra"] is None
@@ -503,11 +590,13 @@ def test_pipeline_idempotent_cycle_and_short_simulate(tmp_path):
     from aqi_pipeline.sources import FrameSource
 
     data = generate("2025-01-01", "2025-05-10", seed=11)
-    cfg = load_config(overrides={
-        "run_dir": str(tmp_path / "pipe"),
-        "model": {"candidates": ["ridge"]},
-        "monitor": {"drift_warn_score": 0.0, "drift_alert_score": 0.0},
-    })
+    cfg = load_config(
+        overrides={
+            "run_dir": str(tmp_path / "pipe"),
+            "model": {"candidates": ["ridge"]},
+            "monitor": {"drift_warn_score": 0.0, "drift_alert_score": 0.0},
+        }
+    )
     pipe = Pipeline(cfg, FrameSource(data))
     pipe.bootstrap("2025-05-01 23:00")
     r1 = pipe.run_cycle("2025-05-02 23:00")
@@ -518,11 +607,18 @@ def test_pipeline_idempotent_cycle_and_short_simulate(tmp_path):
     assert r2["cusum"] == r1["cusum"]
 
     # 1-day simulation where zero 24h forecasts mature before production_end
-    short_cfg = load_config(overrides={
-        "run_dir": str(tmp_path / "short_sim"),
-        "model": {"candidates": ["ridge"]},
-        "simulation": {"seed": 3, "history_start": "2025-01-01", "production_start": "2025-05-01",
-                       "production_end": "2025-05-02", "events": []},
-    })
+    short_cfg = load_config(
+        overrides={
+            "run_dir": str(tmp_path / "short_sim"),
+            "model": {"candidates": ["ridge"]},
+            "simulation": {
+                "seed": 3,
+                "history_start": "2025-01-01",
+                "production_start": "2025-05-01",
+                "production_end": "2025-05-02",
+                "events": [],
+            },
+        }
+    )
     summary = run_simulation(short_cfg, verbose=False)
     assert summary["cycles"] == 1 and summary["comparison"]["pipeline"]["n"] == 0

@@ -5,6 +5,7 @@ the weather forecast issued at t, and the calendar of the target window. The
 target is the AQI at t + horizon, whose averaging window (t+1 .. t+horizon for
 the 24-hour pollutants) lies entirely in the future, so nothing leaks.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -16,16 +17,16 @@ from .aqi import compute_aqi
 from .schema import FORECAST, POLLUTANTS, WEATHER
 
 AQI_LAGS = [6, 12, 24, 48, 72, 168]
-HISTORY_HOURS = 24 * 9          # history needed before the first usable feature row
+HISTORY_HOURS = 24 * 9  # history needed before the first usable feature row
 
 
 @dataclass
 class Dataset:
-    X: pd.DataFrame             # features, indexed by issue time t
-    y: pd.Series                # AQI at t + horizon (NaN where not yet known)
-    aqi_now: pd.Series          # AQI at t: the persistence forecast and the delta reference
-    aqi_ok: pd.Series           # AQI at t rests on enough valid PM2.5 and PM10 hours
-    target_ok: pd.Series        # same test for the label at t + horizon
+    X: pd.DataFrame  # features, indexed by issue time t
+    y: pd.Series  # AQI at t + horizon (NaN where not yet known)
+    aqi_now: pd.Series  # AQI at t: the persistence forecast and the delta reference
+    aqi_ok: pd.Series  # AQI at t rests on enough valid PM2.5 and PM10 hours
+    target_ok: pd.Series  # same test for the label at t + horizon
     groups: dict[str, list[str]]  # raw input -> features derived from it
 
     def usable(self) -> pd.Series:
@@ -43,8 +44,9 @@ def _weekend_fraction(index: pd.DatetimeIndex, shift_hours: int) -> np.ndarray:
     return wk.reindex(index + pd.Timedelta(hours=shift_hours)).to_numpy()
 
 
-def build_dataset(obs: pd.DataFrame, horizon: int = 24, min_label_hours: int = 16,
-                  use_day_of_year: bool = False) -> Dataset:
+def build_dataset(
+    obs: pd.DataFrame, horizon: int = 24, min_label_hours: int = 16, use_day_of_year: bool = False
+) -> Dataset:
     """``obs``: cleaned observations on a complete hourly DatetimeIndex."""
     idx = obs.index
     aq = compute_aqi(obs)

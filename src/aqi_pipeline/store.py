@@ -3,6 +3,7 @@
 One file holds everything the pipeline needs between cycles, so a run can be
 stopped and resumed, and every decision can be audited afterwards.
 """
+
 from __future__ import annotations
 
 import json
@@ -173,16 +174,14 @@ class Store:
 
     # ---- predictions -------------------------------------------------------
     def insert_predictions(self, df: pd.DataFrame) -> int:
-        cols = ["made_at", "target_time", "model_version", "role", "y_pred", "y_model", "y_naive",
-                "served", "input_ok"]
+        cols = ["made_at", "target_time", "model_version", "role", "y_pred", "y_model", "y_naive", "served", "input_ok"]
         if df.empty:
             return 0
         frame = df[cols].copy()
         for col in ("made_at", "target_time"):
             frame[col] = to_utc_naive_dt(frame[col]).dt.strftime(TS)
         values = frame.astype(object).where(frame.notna(), None).values.tolist()
-        sql = (f"INSERT OR REPLACE INTO predictions ({', '.join(cols)}) "
-               f"VALUES ({', '.join('?' * len(cols))})")
+        sql = f"INSERT OR REPLACE INTO predictions ({', '.join(cols)}) VALUES ({', '.join('?' * len(cols))})"
         with self._conn() as c:
             c.executemany(sql, values)
         return len(values)
@@ -198,22 +197,25 @@ class Store:
 
     def unscored_targets(self, until) -> list[str]:
         with self._conn() as c:
-            rows = c.execute("SELECT DISTINCT target_time FROM predictions "
-                             "WHERE label_ok IS NULL AND target_time <= ?", [_ts(until)]).fetchall()
+            rows = c.execute(
+                "SELECT DISTINCT target_time FROM predictions WHERE label_ok IS NULL AND target_time <= ?", [_ts(until)]
+            ).fetchall()
         return [r[0] for r in rows]
 
     def score_predictions(self, labels: pd.DataFrame) -> int:
         """Attach matured labels. ``labels``: index target_time, columns y_true, label_ok."""
         if labels.empty:
             return 0
-        values = [(None if pd.isna(r.y_true) else float(r.y_true), int(r.label_ok), _ts(idx))
-                  for idx, r in labels.iterrows()]
+        values = [
+            (None if pd.isna(r.y_true) else float(r.y_true), int(r.label_ok), _ts(idx)) for idx, r in labels.iterrows()
+        ]
         with self._conn() as c:
             c.executemany("UPDATE predictions SET y_true = ?, label_ok = ? WHERE target_time = ?", values)
         return len(values)
 
-    def load_predictions(self, start=None, end=None, role: str | None = None,
-                         model_version: str | None = None, by: str = "target_time") -> pd.DataFrame:
+    def load_predictions(
+        self, start=None, end=None, role: str | None = None, model_version: str | None = None, by: str = "target_time"
+    ) -> pd.DataFrame:
         if by not in ("made_at", "target_time"):
             raise ValueError(f"invalid sort column: {by!r}")
         sql, args, clauses = "SELECT * FROM predictions", [], []
@@ -240,8 +242,10 @@ class Store:
     # ---- cycles, events, state --------------------------------------------
     def log_cycle(self, cycle_time, payload: dict[str, Any]) -> None:
         with self._conn() as c:
-            c.execute("INSERT OR REPLACE INTO cycles (cycle_time, payload) VALUES (?, ?)",
-                      [_ts(cycle_time), _json_dumps(payload)])
+            c.execute(
+                "INSERT OR REPLACE INTO cycles (cycle_time, payload) VALUES (?, ?)",
+                [_ts(cycle_time), _json_dumps(payload)],
+            )
 
     def load_cycles(self) -> list[dict[str, Any]]:
         with self._conn() as c:
@@ -253,18 +257,20 @@ class Store:
             row = c.execute("SELECT cycle_time, payload FROM cycles ORDER BY cycle_time DESC LIMIT 1").fetchone()
         return {"cycle_time": row[0], **json.loads(row[1])} if row else None
 
-    def log_event(self, ts, kind: str, severity: str, message: str,
-                  payload: dict[str, Any] | None = None) -> None:
+    def log_event(self, ts, kind: str, severity: str, message: str, payload: dict[str, Any] | None = None) -> None:
         with self._conn() as c:
-            c.execute("INSERT INTO events (ts, kind, severity, message, payload) VALUES (?, ?, ?, ?, ?)",
-                      [_ts(ts), kind, severity, message, _json_dumps(payload or {})])
+            c.execute(
+                "INSERT INTO events (ts, kind, severity, message, payload) VALUES (?, ?, ?, ?, ?)",
+                [_ts(ts), kind, severity, message, _json_dumps(payload or {})],
+            )
 
     def load_events(self, limit: int | None = None) -> list[dict[str, Any]]:
         sql = "SELECT ts, kind, severity, message, payload FROM events ORDER BY id"
         with self._conn() as c:
             rows = c.execute(sql).fetchall()
-        events = [{"ts": r[0], "kind": r[1], "severity": r[2], "message": r[3],
-                   "payload": json.loads(r[4])} for r in rows]
+        events = [
+            {"ts": r[0], "kind": r[1], "severity": r[2], "message": r[3], "payload": json.loads(r[4])} for r in rows
+        ]
         return events[-limit:] if limit else events
 
     def get_state(self, key: str, default: Any = None) -> Any:
@@ -274,8 +280,7 @@ class Store:
 
     def set_state(self, key: str, value: Any) -> None:
         with self._conn() as c:
-            c.execute("INSERT OR REPLACE INTO state (key, value) VALUES (?, ?)",
-                      [key, _json_dumps(value)])
+            c.execute("INSERT OR REPLACE INTO state (key, value) VALUES (?, ?)", [key, _json_dumps(value)])
 
 
 def _sanitize_json(obj: Any) -> Any:

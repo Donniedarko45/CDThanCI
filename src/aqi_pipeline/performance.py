@@ -15,6 +15,7 @@ A one-sided CUSUM on the daily error ratio catches slow decay that never
 crosses the window thresholds, and a safe mode serves the persistence forecast
 whenever the model is doing worse than it.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -27,13 +28,19 @@ from .modeling import score
 
 
 def valid_rows(preds: pd.DataFrame) -> pd.DataFrame:
-    ok = ((preds["label_ok"] == 1) & (preds["input_ok"] == 1)
-          & preds["y_true"].notna() & preds["y_model"].notna() & preds["y_naive"].notna())
+    ok = (
+        (preds["label_ok"] == 1)
+        & (preds["input_ok"] == 1)
+        & preds["y_true"].notna()
+        & preds["y_model"].notna()
+        & preds["y_naive"].notna()
+    )
     return preds[ok]
 
 
-def performance_report(preds: pd.DataFrame, ref_rel_mae: float, cfg: MonitorConfig,
-                       expected_rows: int) -> dict[str, Any]:
+def performance_report(
+    preds: pd.DataFrame, ref_rel_mae: float, cfg: MonitorConfig, expected_rows: int
+) -> dict[str, Any]:
     """Accuracy of matured forecasts in the monitoring window against expectation.
 
     ``ratio`` = MAE / (ref_rel_mae x persistence MAE): 1.0 means the model keeps
@@ -54,14 +61,20 @@ def performance_report(preds: pd.DataFrame, ref_rel_mae: float, cfg: MonitorConf
         level = "warn"
     else:
         level = "ok"
-    report.update({
-        "level": level, "mae": round(metrics["mae"], 3), "rmse": round(metrics["rmse"], 3),
-        "bias": round(metrics["bias"], 3), "mae_naive": round(metrics["mae_naive"], 3),
-        "rel_mae": None if np.isnan(metrics["rel_mae"]) else round(metrics["rel_mae"], 4),
-        "expected_mae": round(expected, 3),
-        "ratio": round(ratio, 3), "gap": round(gap, 3),
-        "category_accuracy": round(metrics["category_accuracy"], 4),
-    })
+    report.update(
+        {
+            "level": level,
+            "mae": round(metrics["mae"], 3),
+            "rmse": round(metrics["rmse"], 3),
+            "bias": round(metrics["bias"], 3),
+            "mae_naive": round(metrics["mae_naive"], 3),
+            "rel_mae": None if np.isnan(metrics["rel_mae"]) else round(metrics["rel_mae"], 4),
+            "expected_mae": round(expected, 3),
+            "ratio": round(ratio, 3),
+            "gap": round(gap, 3),
+            "category_accuracy": round(metrics["category_accuracy"], 4),
+        }
+    )
     return report
 
 
@@ -85,7 +98,9 @@ def cusum_update(state: dict[str, float] | None, ratio: float | None, cfg: Monit
     return {"g": round(g, 4), "alarm": bool(g > cfg.cusum_alarm)}
 
 
-def safe_mode_update(active: bool, preds: pd.DataFrame, now: pd.Timestamp, cfg: MonitorConfig) -> tuple[bool, dict[str, Any]]:
+def safe_mode_update(
+    active: bool, preds: pd.DataFrame, now: pd.Timestamp, cfg: MonitorConfig
+) -> tuple[bool, dict[str, Any]]:
     """Decide whether to serve persistence instead of the model.
 
     Enters when, over the last ``safe_window_days`` of matured forecasts, the

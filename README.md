@@ -1,5 +1,8 @@
 # AQI pipeline
 
+[![CI](https://github.com/Donniedarko45/CDThanCI/actions/workflows/ci.yml/badge.svg)](https://github.com/Donniedarko45/CDThanCI/actions/workflows/ci.yml)
+[![CD](https://github.com/Donniedarko45/CDThanCI/actions/workflows/cd.yml/badge.svg)](https://github.com/Donniedarko45/CDThanCI/actions/workflows/cd.yml)
+
 An automated pipeline that forecasts India's CPCB Air Quality Index 24 hours ahead
 from hourly station data, monitors its own inputs and accuracy, and decides for
 itself when to retrain, which data to retrain on, and whether the new model is
@@ -24,13 +27,76 @@ aqi-pipeline --run-dir runs/demo simulate
 
 # Open runs/demo/reports/monitoring_report.html, then:
 aqi-pipeline --run-dir runs/demo status
-aqi-pipeline --run-dir runs/demo serve        # http://127.0.0.1:8000/ (dashboard), /report, /docs
+aqi-pipeline --run-dir runs/demo serve        # http://127.0.0.1:8000/ (Operations Console), /report, /docs
 
-pytest -q                                      # 65 tests
+# Quality, lint, coverage, and package checks:
+ruff check src tests
+ruff format --check src tests
+pytest -q --cov=aqi_pipeline --cov-report=term-missing
+python -m build
 ```
 
 A copy of the demo's output is in `sample_run/` (report and summary) if you only
 want to look.
+
+## Docker & Compose demo
+
+Run the complete one-command live demo (seeds a 45-day synthetic station into `/data`
+and starts the Operations Console on port `8000`):
+
+```bash
+docker compose --profile demo up --build
+```
+
+Open `http://127.0.0.1:8000/` for the Operations Console (`#/overview`, `#/diagnostics`,
+`#/simulator`, `#/registry`, `#/pipeline`), `http://127.0.0.1:8000/report` for the
+standalone monitoring report, and `http://127.0.0.1:8000/docs` for Swagger UI.
+
+For continuous live station operation (Open-Meteo hourly scheduler + API):
+
+```bash
+docker compose --profile live run --rm scheduler \
+  aqi-pipeline --config /app/config/open_meteo.example.yaml --run-dir /data bootstrap
+docker compose --profile live up -d
+```
+
+The container image (`Dockerfile`) runs on `python:3.12-slim` as non-root user `aqi`,
+stores persistent state in `/data`, verifies packaged static assets at build time,
+and exposes a built-in Docker `HEALTHCHECK` against `GET /health`.
+
+```bash
+docker build -t aqi-pipeline:local .
+docker run --rm -v aqi-local:/data aqi-pipeline:local aqi-pipeline --run-dir /data simulate --days 15 --quiet
+docker run -d --name aqi-api -p 8000:8000 -v aqi-local:/data aqi-pipeline:local
+```
+
+## Multi-View Operations Console & HTTP API
+
+`GET /` serves the offline modular Operations Console (`src/aqi_pipeline/static/`) with
+light/dark themes, live auto-refresh, and hash routing across five views:
+
+| View | Route | Focus |
+| --- | --- | --- |
+| Overview & Forecast | `#/overview` | CPCB AQI gauge, pollutant cards, interactive `24h`–`168h` forecast chart, horizon export |
+| Drift & Diagnostics | `#/diagnostics` | PSI/novelty drift breakdown, feature importance, monthly MAE comparison, CUSUM & cycle signals |
+| What-If & Batch Studio | `#/simulator` | 9-day (`216h`) What-If scenarios (`POST /predict`) and CSV/JSON batch scoring (`POST /predict/batch`) |
+| Registry & Audit Log | `#/registry` | Model version lineage (`champion`, `shadow`, `archived`, `rolled_back`), gate outcomes, event log |
+| Pipeline & Config | `#/pipeline` | 7-stage pipeline diagram, sanitized runtime configuration (`GET /api/config`), store telemetry |
+
+API endpoints:
+- **UI & static assets**: `GET /`, `GET /static/*`, `GET /report`, `GET /favicon.ico`, `GET /docs`
+- **Dashboard & analytics**: `GET /dashboard/data?hours=72`, `GET /observations/recent?hours=216`, `GET /api/config`, `GET /api/analytics`
+- **Core & inference**: `GET /health`, `GET /forecast?hours=24`, `GET /model`, `GET /monitoring`, `GET /events?limit=50`, `POST /predict`, `POST /predict/batch`
+
+## CI/CD & dependency automation
+
+- **CI (`.github/workflows/ci.yml`)**: triggers on `push`, `pull_request`, and `workflow_dispatch` with concurrency cancellation across four jobs:
+  - `lint-and-package`: `ruff check src tests`, `ruff format --check src tests`, `node --check` on `src/aqi_pipeline/static/*.js`, `python -m build`, wheel asset verification, and `dist/` upload.
+  - `test-matrix`: Python `3.10` and `3.12` test matrix with `pytest --cov=aqi_pipeline`, coverage XML, JUnit XML, and `$GITHUB_STEP_SUMMARY` reporting.
+  - `e2e-and-ui`: 15-day simulation, live API endpoint smoke checks, headless Playwright Chromium UI verification across views/horizons/themes, and screenshot + HTML report artifacts.
+  - `docker-smoke`: `docker compose config -q`, Buildx build, non-root UID check, seeded container healthcheck, and live HTTP verification.
+- **CD (`.github/workflows/cd.yml`)**: triggers on pushes to `main`, `v*` tags, and `workflow_dispatch`; builds Python distributions and a demo monitoring report, publishes multi-tagged images to `ghcr.io/donniedarko45/cdthanci` with OCI labels and build provenance attestation (`actions/attest-build-provenance`), and creates GitHub Releases on `v*` tags.
+- **Dependabot (`.github/dependabot.yml`)**: weekly update checks for `pip`, `github-actions`, and `docker`.
 
 ## What it does each cycle
 
@@ -122,16 +188,11 @@ environment could not reach the API. Check the first run's data-quality report.
 ```bash
 0 * * * *  aqi-pipeline --config /etc/aqi/station.yaml run-cycle     # cron, hourly
 aqi-pipeline --config station.yaml schedule --every 3600             # or the built-in loop
-docker compose up -d                                                  # scheduler + API
+docker compose --profile demo up --build                             # 45-day synthetic demo + UI
+docker compose --profile live up -d                                  # scheduler + API
 ```
 
 `run-cycle` is idempotent: running it twice for the same hour changes nothing.
-The Dockerfile and compose file are provided but were not built or run in the
-environment this project was written in.
-
-Web Dashboard & API endpoints:
-- Live UI & report: `GET /` (offline HTML dashboard with 24h–168h interactive forecast view, monitoring & model-health charts, Light/Dark theme toggle, and What-If `POST /predict` playground), `GET /report` (self-contained HTML monitoring report), `GET /dashboard/data?hours=72`, `GET /observations/recent?hours=216`, and `GET /docs`.
-- JSON API: `GET /health`, `/forecast?hours=24`, `/model`, `/monitoring`, `/events?limit=50`, and `POST /predict` (send at least 24 recent hourly rows; nine days gives every feature its history).
 
 ## Configuration
 
@@ -141,8 +202,9 @@ lists them all with comments. Unknown keys are rejected when the file is loaded.
 ## Layout
 
 ```
-src/aqi_pipeline/   the package (pipeline stages, API, HTML dashboard and report builder)
-tests/              unit, end-to-end and dashboard tests
+.github/            GitHub Actions CI/CD workflows and Dependabot config
+src/aqi_pipeline/   the package (pipeline stages, API, static Operations Console, report builder)
+tests/              unit, end-to-end, dashboard, and DevOps config tests
 config/             default settings and two real-data examples
 sample_run/         report and summary from the demo run
 ```

@@ -1,14 +1,15 @@
 """Command line for the AQI pipeline.
 
-    aqi-pipeline simulate                      full demo on synthetic data, with report
-    aqi-pipeline bootstrap --until 2026-01-01  load history from the configured source, train v001
-    aqi-pipeline run-cycle                     one cycle up to now (call from cron or a scheduler)
-    aqi-pipeline schedule --every 3600         run cycles in a loop
-    aqi-pipeline status                        champion, latest signals and decision
-    aqi-pipeline report                        rebuild the HTML monitoring report
-    aqi-pipeline rollback                      manually restore the shadow model
-    aqi-pipeline serve                         start the HTTP API
+aqi-pipeline simulate                      full demo on synthetic data, with report
+aqi-pipeline bootstrap --until 2026-01-01  load history from the configured source, train v001
+aqi-pipeline run-cycle                     one cycle up to now (call from cron or a scheduler)
+aqi-pipeline schedule --every 3600         run cycles in a loop
+aqi-pipeline status                        champion, latest signals and decision
+aqi-pipeline report                        rebuild the HTML monitoring report
+aqi-pipeline rollback                      manually restore the shadow model
+aqi-pipeline serve                         start the HTTP API
 """
+
 from __future__ import annotations
 
 import argparse
@@ -33,11 +34,14 @@ def _pipeline(args, with_source: bool = True) -> Pipeline:
 
 
 def _now(args) -> pd.Timestamp:
-    return to_utc_naive(args.now) if getattr(args, "now", None) else pd.Timestamp.now("UTC").tz_localize(None).floor("h")
+    if getattr(args, "now", None):
+        return to_utc_naive(args.now)
+    return pd.Timestamp.now("UTC").tz_localize(None).floor("h")
 
 
 def cmd_simulate(args) -> int:
     from .simulate import run_simulation
+
     overrides = {"run_dir": args.run_dir} if args.run_dir else {}
     cfg = load_config(args.config, overrides)
     if args.days is not None:
@@ -45,6 +49,7 @@ def cmd_simulate(args) -> int:
             print("--days must be positive", file=sys.stderr)
             return 2
         from .simulate import simulation_settings
+
         sim = simulation_settings(cfg)
         end = to_utc_naive(sim["production_start"]) + pd.Timedelta(days=args.days)
         cfg.simulation = {**cfg.simulation, "production_end": str(end.date())}
@@ -61,8 +66,10 @@ def cmd_bootstrap(args) -> int:
         return 2
     version = pipe.bootstrap(to_utc_naive(args.until) if args.until else _now(args))
     meta = pipe.registry.meta(version)
-    print(f"{version}: {meta['kind']} trained on {meta['n_train_rows']} rows, "
-          f"backtest MAE {meta['validation']['mae']:.1f} ({meta['validation']['rel_mae']:.2f} x persistence)")
+    print(
+        f"{version}: {meta['kind']} trained on {meta['n_train_rows']} rows, "
+        f"backtest MAE {meta['validation']['mae']:.1f} ({meta['validation']['rel_mae']:.2f} x persistence)"
+    )
     return 0
 
 
@@ -83,9 +90,11 @@ def cmd_schedule(args) -> int:
         started = time.time()
         try:
             record = pipe.run_cycle(pd.Timestamp.now("UTC").tz_localize(None).floor("h"))
-            print(f"{pd.Timestamp.now():%Y-%m-%d %H:%M} {record['decision']['action']}: {record['decision']['reason']}",
-                  flush=True)
-        except Exception as exc:          # keep the loop alive; the next cycle retries
+            print(
+                f"{pd.Timestamp.now():%Y-%m-%d %H:%M} {record['decision']['action']}: {record['decision']['reason']}",
+                flush=True,
+            )
+        except Exception as exc:  # keep the loop alive; the next cycle retries
             print(f"cycle failed: {exc!r}", file=sys.stderr, flush=True)
         time.sleep(max(1.0, args.every - (time.time() - started)))
 
@@ -99,12 +108,20 @@ def cmd_status(args) -> int:
     meta = pipe.registry.meta(champion)
     last = pipe.store.latest_cycle() or {}
     out = {
-        "champion": champion, "shadow": pipe.registry.shadow, "trained_at": meta["trained_at"],
-        "model": meta["kind"], "strategy": meta["strategy"], "trigger": meta["trigger"],
-        "last_cycle": last.get("cycle_time"), "decision": (last.get("decision") or {}).get("action"),
-        "reason": (last.get("decision") or {}).get("reason"), "safe_mode": last.get("safe_mode"),
-        "performance": last.get("performance"), "drift_level": (last.get("drift") or {}).get("level"),
-        "drift_score": (last.get("drift") or {}).get("score"), "drifted_inputs": (last.get("drift") or {}).get("drifted"),
+        "champion": champion,
+        "shadow": pipe.registry.shadow,
+        "trained_at": meta["trained_at"],
+        "model": meta["kind"],
+        "strategy": meta["strategy"],
+        "trigger": meta["trigger"],
+        "last_cycle": last.get("cycle_time"),
+        "decision": (last.get("decision") or {}).get("action"),
+        "reason": (last.get("decision") or {}).get("reason"),
+        "safe_mode": last.get("safe_mode"),
+        "performance": last.get("performance"),
+        "drift_level": (last.get("drift") or {}).get("level"),
+        "drift_score": (last.get("drift") or {}).get("score"),
+        "drifted_inputs": (last.get("drift") or {}).get("drifted"),
     }
     print(json.dumps(out, indent=2))
     return 0
@@ -133,6 +150,7 @@ def cmd_serve(args) -> int:
     import os
 
     import uvicorn
+
     if args.config:
         os.environ["AQI_CONFIG"] = str(args.config)
     if args.run_dir:
@@ -142,8 +160,9 @@ def cmd_serve(args) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="aqi-pipeline", description=__doc__,
-                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        prog="aqi-pipeline", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("--config", help="YAML config file")
     parser.add_argument("--run-dir", help="where the database, registry and reports live")
     sub = parser.add_subparsers(dest="command", required=True)

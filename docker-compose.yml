@@ -1,23 +1,72 @@
-# Two containers over one volume: the scheduler runs a pipeline cycle every hour,
-# the API serves forecasts and monitoring state.
+# AQI Pipeline Docker Compose stack.
 #
-#   docker compose run --rm scheduler aqi-pipeline --config /app/config/open_meteo.example.yaml --run-dir /data bootstrap
-#   docker compose up -d
+# Quick one-command live demo (45-day synthetic simulation + Web Operations Console on :8000):
+#   docker compose --profile demo up --build
+#
+# Live station mode (Open-Meteo hourly scheduler + Web API on :8000):
+#   docker compose --profile live run --rm scheduler aqi-pipeline --config /app/config/open_meteo.example.yaml --run-dir /data bootstrap
+#   docker compose --profile live up -d
+
 services:
   scheduler:
     build: .
+    profiles: ["live"]
     command: ["aqi-pipeline", "--config", "/app/config/open_meteo.example.yaml", "--run-dir", "/data", "schedule", "--every", "3600"]
-    volumes: ["aqi-data:/data"]
+    environment:
+      AQI_CONFIG: /app/config/open_meteo.example.yaml
+      AQI_RUN_DIR: /data
+    volumes:
+      - aqi-data:/data
     restart: unless-stopped
 
   api:
     build: .
+    profiles: ["live"]
     environment:
       AQI_CONFIG: /app/config/open_meteo.example.yaml
       AQI_RUN_DIR: /data
-    ports: ["8000:8000"]
-    volumes: ["aqi-data:/data"]
+    ports:
+      - "8000:8000"
+    volumes:
+      - aqi-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  demo-seed:
+    build: .
+    profiles: ["demo"]
+    command: ["sh", "-c", "test -f /data/summary.json || aqi-pipeline --run-dir /data simulate --days 45"]
+    environment:
+      AQI_RUN_DIR: /data
+    volumes:
+      - aqi-demo:/data
+    restart: "no"
+
+  demo-api:
+    build: .
+    profiles: ["demo"]
+    depends_on:
+      demo-seed:
+        condition: service_completed_successfully
+    environment:
+      AQI_RUN_DIR: /data
+    ports:
+      - "8000:8000"
+    volumes:
+      - aqi-demo:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     restart: unless-stopped
 
 volumes:
   aqi-data:
+  aqi-demo:

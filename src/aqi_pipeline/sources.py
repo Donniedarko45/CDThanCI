@@ -8,6 +8,7 @@ Open-Meteo values are modelled (CAMS) rather than measured by a station, and
 this connector could not be exercised against the live API in the environment
 it was written in; its parser is covered by a test on a recorded-shape payload.
 """
+
 from __future__ import annotations
 
 import json
@@ -37,11 +38,14 @@ def add_forecast_columns(df: pd.DataFrame, noise: bool = False) -> pd.DataFrame:
     out = df.copy()
     for col in WEATHER:
         out[col] = pd.to_numeric(out[col], errors="coerce")
-    rev = lambda s, how: getattr(s[::-1].rolling(24, min_periods=18), how)()[::-1].shift(-1)
-    out["fc_temperature"] = rev(out["temperature"], "mean")
-    out["fc_humidity"] = rev(out["humidity"], "mean")
-    out["fc_wind_speed"] = rev(out["wind_speed"], "mean")
-    out["fc_precipitation"] = rev(out["precipitation"], "sum")
+
+    def _rev(s: pd.Series, how: str) -> pd.Series:
+        return getattr(s[::-1].rolling(24, min_periods=18), how)()[::-1].shift(-1)
+
+    out["fc_temperature"] = _rev(out["temperature"], "mean")
+    out["fc_humidity"] = _rev(out["humidity"], "mean")
+    out["fc_wind_speed"] = _rev(out["wind_speed"], "mean")
+    out["fc_precipitation"] = _rev(out["precipitation"], "sum")
     return out
 
 
@@ -68,8 +72,7 @@ class CsvSource(FrameSource):
     ``scale`` (for example ``{"co": 0.001}``) to convert.
     """
 
-    def __init__(self, path: str | Path, columns: dict[str, str] | None = None,
-                 scale: dict[str, float] | None = None):
+    def __init__(self, path: str | Path, columns: dict[str, str] | None = None, scale: dict[str, float] | None = None):
         raw = pd.read_csv(path)
         mapping = {v: k for k, v in (columns or {}).items()}
         raw = raw.rename(columns=mapping)
@@ -88,14 +91,23 @@ class CsvSource(FrameSource):
 
 AQ_URL = "https://air-quality-api.open-meteo.com/v1/air-quality"
 WX_URL = "https://api.open-meteo.com/v1/forecast"
-AQ_VARS = {"pm2_5": "pm25", "pm10": "pm10", "nitrogen_dioxide": "no2", "sulphur_dioxide": "so2",
-           "carbon_monoxide": "co", "ozone": "o3"}
-WX_VARS = {"temperature_2m": "temperature", "relative_humidity_2m": "humidity",
-           "wind_speed_10m": "wind_speed", "precipitation": "precipitation"}
+AQ_VARS = {
+    "pm2_5": "pm25",
+    "pm10": "pm10",
+    "nitrogen_dioxide": "no2",
+    "sulphur_dioxide": "so2",
+    "carbon_monoxide": "co",
+    "ozone": "o3",
+}
+WX_VARS = {
+    "temperature_2m": "temperature",
+    "relative_humidity_2m": "humidity",
+    "wind_speed_10m": "wind_speed",
+    "precipitation": "precipitation",
+}
 
 
-def parse_open_meteo(air_quality: dict[str, Any], weather: dict[str, Any],
-                     now: pd.Timestamp) -> pd.DataFrame:
+def parse_open_meteo(air_quality: dict[str, Any], weather: dict[str, Any], now: pd.Timestamp) -> pd.DataFrame:
     """Turn the two API responses into pipeline rows up to ``now``.
 
     The weather response includes forecast hours beyond ``now``; they feed the
@@ -137,11 +149,9 @@ class OpenMeteoSource:
         else:
             delta_days = max(0.0, (until_ts - since_ts).total_seconds() / 86400.0)
             days_back = int(np.clip(np.ceil(delta_days) + 2, 2, 92))
-        common = {"latitude": self.latitude, "longitude": self.longitude, "timezone": "GMT",
-                  "past_days": days_back}
+        common = {"latitude": self.latitude, "longitude": self.longitude, "timezone": "GMT", "past_days": days_back}
         aq = self._get(AQ_URL, {**common, "hourly": ",".join(AQ_VARS), "forecast_days": 1})
-        wx = self._get(WX_URL, {**common, "hourly": ",".join(WX_VARS), "forecast_days": 3,
-                                "wind_speed_unit": "ms"})
+        wx = self._get(WX_URL, {**common, "hourly": ",".join(WX_VARS), "forecast_days": 3, "wind_speed_unit": "ms"})
         frame = parse_open_meteo(aq, wx, until_ts)
         if since_ts is not None:
             frame = frame[frame["timestamp"] > since_ts]
@@ -154,5 +164,6 @@ def make_source(spec: dict[str, Any]) -> Source:
         return CsvSource(spec["path"], spec.get("columns"), spec.get("scale"))
     if kind == "open_meteo":
         return OpenMeteoSource(float(spec["latitude"]), float(spec["longitude"]))
-    raise ValueError(f"source type {kind!r} needs to be 'csv' or 'open_meteo' "
-                     "(the synthetic source is created by the simulation)")
+    raise ValueError(
+        f"source type {kind!r} needs to be 'csv' or 'open_meteo' (the synthetic source is created by the simulation)"
+    )
