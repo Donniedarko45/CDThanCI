@@ -265,13 +265,16 @@ class Store:
             )
 
     def load_events(self, limit: int | None = None) -> list[dict[str, Any]]:
-        sql = "SELECT ts, kind, severity, message, payload FROM events ORDER BY id"
+        sql, args = "SELECT id, ts, kind, severity, message, payload FROM events", []
+        if limit:
+            # newest `limit` rows only, so the dashboard's poll does not parse the whole log
+            sql = f"SELECT * FROM ({sql} ORDER BY id DESC LIMIT ?)"
+            args.append(int(limit))
         with self._conn() as c:
-            rows = c.execute(sql).fetchall()
-        events = [
-            {"ts": r[0], "kind": r[1], "severity": r[2], "message": r[3], "payload": json.loads(r[4])} for r in rows
+            rows = c.execute(sql + " ORDER BY id", args).fetchall()
+        return [
+            {"ts": r[1], "kind": r[2], "severity": r[3], "message": r[4], "payload": json.loads(r[5])} for r in rows
         ]
-        return events[-limit:] if limit else events
 
     def get_state(self, key: str, default: Any = None) -> Any:
         with self._conn() as c:
