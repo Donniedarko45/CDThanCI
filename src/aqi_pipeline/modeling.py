@@ -20,12 +20,13 @@ from .features import Dataset
 
 def make_estimator(kind: str, params: dict[str, Any], random_state: int = 0):
     if kind == "ridge":
-        return make_pipeline(SimpleImputer(strategy="median"), StandardScaler(), Ridge(**params))
+        return make_pipeline(SimpleImputer(strategy="median", keep_empty_features=True),
+                             StandardScaler(), Ridge(**params))
     if kind == "hgb":
         return HistGradientBoostingRegressor(early_stopping=False, random_state=random_state, **params)
     if kind == "rf":
         defaults = {"n_estimators": 150, "min_samples_leaf": 20, "max_features": 0.4, "n_jobs": -1}
-        return make_pipeline(SimpleImputer(strategy="median"),
+        return make_pipeline(SimpleImputer(strategy="median", keep_empty_features=True),
                              RandomForestRegressor(random_state=random_state, **{**defaults, **params}))
     raise ValueError(f"unknown model kind: {kind}")
 
@@ -42,6 +43,8 @@ class ForecastModel:
 
     def fit(self, X: pd.DataFrame, y: pd.Series, aqi_now: pd.Series,
             sample_weight: np.ndarray | None = None, random_state: int = 0) -> "ForecastModel":
+        if X.empty:
+            raise ValueError("cannot fit model on empty dataset")
         self.feature_names = list(X.columns)
         target = self._to_target(y, aqi_now)
         self.estimator = make_estimator(self.kind, self.params, random_state)
@@ -54,12 +57,17 @@ class ForecastModel:
             # Tree models get the weights as a weighted resample of the rows: the same
             # emphasis in expectation, without the slow weighted binning.
             p = np.asarray(sample_weight, dtype=float)
-            pick = np.sort(np.random.default_rng(random_state).choice(len(tv), size=len(tv), p=p / p.sum()))
+            total = float(p.sum())
+            if total <= 0 or np.any(p < 0) or np.any(~np.isfinite(p)):
+                raise ValueError("sample_weight must be finite, non-negative, and have positive sum")
+            pick = np.sort(np.random.default_rng(random_state).choice(len(tv), size=len(tv), p=p / total))
             self.estimator.fit(Xv[pick], tv[pick])
         return self
 
     def predict(self, X: pd.DataFrame, aqi_now: pd.Series) -> np.ndarray:
         """AQI forecasts in [0, 500]; NaN where no reference AQI exists (delta mode)."""
+        if X.empty:
+            return np.empty(0, dtype=float)
         raw = self.estimator.predict(X[self.feature_names].to_numpy())
         ref = aqi_now.to_numpy(dtype=float)
         if self.target_mode == "delta":
@@ -134,6 +142,8 @@ def backtest(ds: Dataset, kind: str, params: dict[str, Any], cfg: ModelConfig,
     started (a gap of ``horizon`` hours), then scores the block.
     """
     usable = training_rows(ds)
+    if len(usable) == 0:
+        raise ValueError("not enough history for a backtest")
     end = usable[-1] + pd.Timedelta(hours=1)
     preds, fold_scores = [], []
     for k in range(cfg.cv_folds, 0, -1):
@@ -145,6 +155,8 @@ def backtest(ds: Dataset, kind: str, params: dict[str, Any], cfg: ModelConfig,
             continue
         model = fit_model(ds, train, kind, params, cfg)
         metrics, pred = evaluate(model, ds, test)
+        if metrics.get("n", 0) == 0:
+            continue
         fold_scores.append(metrics)
         preds.append(pred)
     if not preds:
@@ -156,17 +168,21 @@ def backtest(ds: Dataset, kind: str, params: dict[str, Any], cfg: ModelConfig,
 
 def select_and_train(ds: Dataset, cfg: ModelConfig, horizon: int = 24) -> tuple[ForecastModel, dict[str, Any]]:
     """Backtest every candidate, keep the one with the lowest MAE, refit it on all rows."""
+    if not cfg.candidates:
+        raise ValueError("model.candidates must not be empty")
     param_map = {"hgb": cfg.hgb_params, "ridge": cfg.ridge_params, "rf": {}}
     results: dict[str, Any] = {}
     best_kind, best_mae = None, np.inf
     for kind in cfg.candidates:
         t0 = time.time()
-        bt = backtest(ds, kind, param_map[kind], cfg, horizon)
+        bt = backtest(ds, kind, param_map.get(kind, {}), cfg, horizon)
         results[kind] = {**bt["metrics"], "seconds": round(time.time() - t0, 2)}
         if bt["metrics"]["mae"] < best_mae:
             best_kind, best_mae = kind, bt["metrics"]["mae"]
+    if best_kind is None:
+        raise ValueError("no candidate model could be trained")
     rows = training_rows(ds, cfg.train_stride_hours)
-    model = fit_model(ds, rows, best_kind, param_map[best_kind], cfg)
+    model = fit_model(ds, rows, best_kind, param_map.get(best_kind, {}), cfg)
     info = {
         "selected": best_kind,
         "candidates": results,
@@ -186,6 +202,8 @@ def group_importance(model: ForecastModel, ds: Dataset, rows: pd.Index, max_rows
     in MAE is that input's importance. Results are normalised to sum to 1 and
     weight the drift score, so drift in an input the model barely uses counts little.
     """
+    if len(rows) == 0:
+        return {g: 0.0 for g, feats in ds.groups.items() if feats}
     rng = np.random.default_rng(seed)
     if len(rows) > max_rows:
         rows = rows[np.sort(rng.choice(len(rows), max_rows, replace=False))]

@@ -56,8 +56,8 @@ def reference_slice(ref: pd.DataFrame, center: pd.Timestamp, cfg: MonitorConfig,
     pool = ref
     if exclude is not None:
         pool = ref[(ref.index < exclude[0]) | (ref.index >= exclude[1])]
-    doy = pool.index.dayofyear.to_numpy()
-    dist = np.abs(doy - center.dayofyear)
+    doy = pool.index.day_of_year.to_numpy()
+    dist = np.abs(doy - center.day_of_year)
     dist = np.minimum(dist, 365 - dist)
     seasonal = pool[dist <= cfg.season_half_width_days]
     if len(seasonal) >= cfg.min_reference_rows:
@@ -73,6 +73,8 @@ def calibrate_thresholds(ref: pd.DataFrame, columns: list[str], cfg: MonitorConf
     ``calibration_margin`` x the ``calibration_quantile`` of those scores, never
     below ``psi_floor``.
     """
+    if ref.empty:
+        return {col: cfg.psi_floor for col in columns}
     window = pd.Timedelta(days=cfg.drift_window_days)
     scores: dict[str, list[float]] = {c: [] for c in columns}
     start = ref.index[0]
@@ -83,6 +85,8 @@ def calibrate_thresholds(ref: pd.DataFrame, columns: list[str], cfg: MonitorConf
         reference, _ = reference_slice(ref, start + window / 2, cfg, exclude=(start - margin, end + margin))
         if len(reference) >= cfg.min_reference_rows:
             for col in columns:
+                if col not in ref.columns:
+                    continue
                 value = psi(reference[col], current[col], cfg.psi_bins)
                 if not np.isnan(value):
                     scores[col].append(value)
@@ -104,6 +108,9 @@ def drift_report(ref: pd.DataFrame, current: pd.DataFrame, thresholds: dict[str,
     ``score`` is the importance-weighted share of monitored inputs whose PSI
     exceeds its threshold (0 = nothing drifted, 1 = everything the model relies on).
     """
+    if current.empty:
+        return {"level": "ok", "score": 0.0, "reference": "none",
+                "reference_rows": int(len(ref)), "window_rows": 0, "drifted": [], "columns": {}}
     center = current.index[0] + (current.index[-1] - current.index[0]) / 2
     reference, mode = reference_slice(ref, center, cfg)
     columns = [c for c in thresholds if c in current.columns and c in reference.columns]
@@ -114,6 +121,7 @@ def drift_report(ref: pd.DataFrame, current: pd.DataFrame, thresholds: dict[str,
     detail, score = {}, 0.0
     recent = current[current.index > current.index[-1] - pd.Timedelta(days=cfg.novelty_window_days)]
     q = cfg.envelope_quantile
+    nov_share = max(float(cfg.novelty_share), 1e-6)
     for col in columns:
         value = psi(reference[col], current[col], cfg.psi_bins)
         if np.isnan(value):
@@ -122,14 +130,15 @@ def drift_report(ref: pd.DataFrame, current: pd.DataFrame, thresholds: dict[str,
         lo, hi = ref[col].quantile(q), ref[col].quantile(1 - q)
         vals = recent[col].dropna()
         novel = float(((vals < lo) | (vals > hi)).mean()) if len(vals) >= 12 else 0.0
-        drifted = value > thresholds[col] or novel >= cfg.novelty_share
+        thresh = max(float(thresholds[col]), 1e-6)
+        drifted = value > thresh or novel >= cfg.novelty_share
         detail[col] = {"psi": round(value, 4), "threshold": thresholds[col],
-                       "ratio": round(value / thresholds[col], 3), "novel": round(novel, 3),
+                       "ratio": round(value / thresh, 3), "novel": round(novel, 3),
                        "drifted": bool(drifted), "weight": round(weights[col] / total, 4)}
         if drifted:
             score += weights[col] / total
     drifted_cols = sorted((c for c, d in detail.items() if d["drifted"]),
-                          key=lambda c: -max(detail[c]["ratio"], detail[c]["novel"] / cfg.novelty_share))
+                          key=lambda c: -max(detail[c]["ratio"], detail[c]["novel"] / nov_share))
     level = "alert" if score >= cfg.drift_alert_score else "warn" if score >= cfg.drift_warn_score else "ok"
     return {"level": level, "score": round(score, 4), "reference": mode,
             "reference_rows": int(len(reference)), "window_rows": int(len(current)),

@@ -16,6 +16,9 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
+import threading
+import time
 from pathlib import Path
 from typing import Any
 
@@ -23,7 +26,42 @@ import joblib
 import pandas as pd
 
 from .modeling import ForecastModel
-from .store import _json_default
+from .schema import to_utc_naive
+from .store import _json_default, _sanitize_json
+
+
+def _read_json(path: Path) -> dict[str, Any]:
+    for attempt in range(10):
+        try:
+            with open(path, "r", encoding="utf-8") as fh:
+                return json.load(fh)
+        except PermissionError:
+            if attempt == 9:
+                raise
+            time.sleep(0.01)
+    raise RuntimeError(f"failed to read {path}")
+
+
+def _write_json(path: Path, data: Any) -> None:
+    tmp = path.parent / f".{path.name}.{os.getpid()}.{threading.get_ident()}.tmp"
+    payload = json.dumps(_sanitize_json(data), indent=2, default=_json_default, allow_nan=False)
+    try:
+        with open(tmp, "w", encoding="utf-8") as fh:
+            fh.write(payload)
+        for attempt in range(10):
+            try:
+                os.replace(tmp, path)       # atomic: readers never see a half-written file
+                return
+            except PermissionError:
+                if attempt == 9:
+                    raise
+                time.sleep(0.01)
+    finally:
+        if tmp.exists():
+            try:
+                tmp.unlink()
+            except OSError:
+                pass
 
 
 class ModelRegistry:
@@ -37,14 +75,10 @@ class ModelRegistry:
 
     # ---- index -------------------------------------------------------------
     def _read(self) -> dict[str, Any]:
-        with open(self._index_path, "r", encoding="utf-8") as fh:
-            return json.load(fh)
+        return _read_json(self._index_path)
 
     def _write(self, index: dict[str, Any]) -> None:
-        tmp = self._index_path.with_suffix(".tmp")
-        with open(tmp, "w", encoding="utf-8") as fh:
-            json.dump(index, fh, indent=2, default=_json_default)
-        os.replace(tmp, self._index_path)       # atomic: readers never see a half-written index
+        _write_json(self._index_path, index)
 
     @property
     def champion(self) -> str | None:
@@ -67,18 +101,21 @@ class ModelRegistry:
         version = f"v{index['next_id']:03d}"
         folder = self.root / version
         folder.mkdir(parents=True, exist_ok=False)
-        joblib.dump(model, folder / "model.joblib", compress=3)
-        joblib.dump(reference, folder / "reference.joblib", compress=3)
-        meta = {"version": version, "registered_at": str(pd.Timestamp(ts)), **meta}
-        with open(folder / "meta.json", "w", encoding="utf-8") as fh:
-            json.dump(meta, fh, indent=2, default=_json_default)
-        index["next_id"] += 1
-        index["versions"][version] = {
-            "stage": "candidate", "registered_at": meta["registered_at"],
-            "kind": meta.get("kind"), "strategy": meta.get("strategy"), "trigger": meta.get("trigger"),
-        }
-        index["history"].append({"ts": meta["registered_at"], "action": "register", "version": version})
-        self._write(index)
+        try:
+            joblib.dump(model, folder / "model.joblib", compress=3)
+            joblib.dump(reference, folder / "reference.joblib", compress=3)
+            meta = {"version": version, "registered_at": str(to_utc_naive(ts)), **meta}
+            _write_json(folder / "meta.json", meta)
+            index["next_id"] += 1
+            index["versions"][version] = {
+                "stage": "candidate", "registered_at": meta["registered_at"],
+                "kind": meta.get("kind"), "strategy": meta.get("strategy"), "trigger": meta.get("trigger"),
+            }
+            index["history"].append({"ts": meta["registered_at"], "action": "register", "version": version})
+            self._write(index)
+        except BaseException:
+            shutil.rmtree(folder, ignore_errors=True)
+            raise
         self._cache[version] = model
         return version
 
@@ -88,13 +125,11 @@ class ModelRegistry:
         return self._cache[version]
 
     def meta(self, version: str) -> dict[str, Any]:
-        with open(self.root / version / "meta.json", "r", encoding="utf-8") as fh:
-            return json.load(fh)
+        return _read_json(self.root / version / "meta.json")
 
     def update_meta(self, version: str, changes: dict[str, Any]) -> None:
         meta = {**self.meta(version), **changes}
-        with open(self.root / version / "meta.json", "w", encoding="utf-8") as fh:
-            json.dump(meta, fh, indent=2, default=_json_default)
+        _write_json(self.root / version / "meta.json", meta)
 
     def reference(self, version: str) -> pd.DataFrame:
         return joblib.load(self.root / version / "reference.joblib")
@@ -110,9 +145,10 @@ class ModelRegistry:
             index["versions"][previous]["stage"] = "shadow"
         index["shadow"] = previous
         index["champion"] = version
+        ts_str = str(to_utc_naive(ts))
         index["versions"][version]["stage"] = "champion"
-        index["versions"][version]["promoted_at"] = str(pd.Timestamp(ts))
-        index["history"].append({"ts": str(pd.Timestamp(ts)), "action": "promote", "version": version,
+        index["versions"][version]["promoted_at"] = ts_str
+        index["history"].append({"ts": ts_str, "action": "promote", "version": version,
                                  "replaced": previous, "reason": reason})
         self._write(index)
 
@@ -122,7 +158,7 @@ class ModelRegistry:
         if shadow:
             index["versions"][shadow]["stage"] = "archived"
             index["shadow"] = None
-            index["history"].append({"ts": str(pd.Timestamp(ts)), "action": "retire_shadow",
+            index["history"].append({"ts": str(to_utc_naive(ts)), "action": "retire_shadow",
                                      "version": shadow, "reason": reason})
             self._write(index)
         return shadow
@@ -136,7 +172,7 @@ class ModelRegistry:
         index["versions"][failed]["stage"] = "rolled_back"
         index["versions"][restored]["stage"] = "champion"
         index["champion"], index["shadow"] = restored, None
-        index["history"].append({"ts": str(pd.Timestamp(ts)), "action": "rollback", "version": restored,
+        index["history"].append({"ts": str(to_utc_naive(ts)), "action": "rollback", "version": restored,
                                  "replaced": failed, "reason": reason})
         self._write(index)
         return restored

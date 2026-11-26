@@ -35,10 +35,11 @@ class Dataset:
 
 def _weekend_fraction(index: pd.DatetimeIndex, shift_hours: int) -> np.ndarray:
     """Share of the 24 hours ending at t + shift that fall on a weekend."""
-    is_weekend = pd.Series((index.dayofweek >= 5).astype(float), index=index)
+    if len(index) == 0:
+        return np.zeros(0, dtype=float)
     # the calendar is known in advance, so build it on an extended index
     ext = pd.date_range(index[0] - pd.Timedelta(hours=24), index[-1] + pd.Timedelta(hours=shift_hours), freq="h")
-    wk = pd.Series((ext.dayofweek >= 5).astype(float), index=ext).rolling(24, min_periods=1).mean()
+    wk = pd.Series((ext.day_of_week >= 5).astype(float), index=ext).rolling(24, min_periods=1).mean()
     return wk.reindex(index + pd.Timedelta(hours=shift_hours)).to_numpy()
 
 
@@ -93,7 +94,7 @@ def build_dataset(obs: pd.DataFrame, horizon: int = 24, min_label_hours: int = 1
 
     hour = idx.hour.to_numpy()
     target_time = idx + pd.Timedelta(hours=horizon)
-    doy = target_time.dayofyear.to_numpy()
+    doy = target_time.day_of_year.to_numpy()
     add("calendar", "hour_sin", np.sin(2 * np.pi * hour / 24))
     add("calendar", "hour_cos", np.cos(2 * np.pi * hour / 24))
     if use_day_of_year:
@@ -111,5 +112,5 @@ def build_dataset(obs: pd.DataFrame, horizon: int = 24, min_label_hours: int = 1
         pm_ok &= obs[col].rolling(24, min_periods=1).count() >= min_label_hours
     aqi_ok = pm_ok & aqi.notna()
     y = aqi.shift(-horizon)
-    target_ok = aqi_ok.shift(-horizon).fillna(False).astype(bool)
+    target_ok = aqi_ok.shift(-horizon, fill_value=False).astype(bool)
     return Dataset(X=X, y=y, aqi_now=aqi, aqi_ok=aqi_ok, target_ok=target_ok, groups=groups)

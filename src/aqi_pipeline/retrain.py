@@ -26,6 +26,7 @@ import pandas as pd
 from .config import ModelConfig, RetrainConfig
 from .features import Dataset
 from .modeling import ForecastModel, evaluate, fit_model, score, training_rows
+from .schema import to_utc_naive
 
 TUNE_SPACE = {
     "learning_rate": [0.03, 0.06, 0.1],
@@ -57,12 +58,15 @@ class RetrainOutcome:
 def strategy_rows(ds: Dataset, strategy: str, cfg: RetrainConfig, mcfg: ModelConfig,
                   train_end: pd.Timestamp) -> tuple[pd.Index, np.ndarray | None]:
     """Training rows and sample weights for a data strategy, using labels known by ``train_end``."""
+    train_end = to_utc_naive(train_end)
     rows = training_rows(ds, mcfg.train_stride_hours, end=train_end)
     if strategy == "full_history":
         return rows, None
     if strategy == "recent_window":
         return rows[rows >= train_end - pd.Timedelta(days=cfg.recent_window_days)], None
     if strategy == "recency_weighted":
+        if cfg.half_life_days <= 0:
+            raise ValueError("retrain.half_life_days must be positive")
         age_days = (train_end - rows) / pd.Timedelta(days=1)
         return rows, np.maximum(0.5 ** (np.asarray(age_days, dtype=float) / cfg.half_life_days), 0.02)
     raise ValueError(f"unknown strategy: {strategy}")
@@ -94,6 +98,7 @@ def run_retraining(ds: Dataset, now: pd.Timestamp, champion: ForecastModel, mcfg
                    eval_days: int | None = None) -> RetrainOutcome:
     """Train challengers, compare with the champion on the latest days, apply the gate."""
     t0 = time.time()
+    now = to_utc_naive(now)
     usable = training_rows(ds)
     eval_days = eval_days or rcfg.eval_days
     eval_start = now - pd.Timedelta(days=eval_days)
@@ -108,6 +113,8 @@ def run_retraining(ds: Dataset, now: pd.Timestamp, champion: ForecastModel, mcfg
     y_hold, naive_hold = ds.y.loc[holdout], ds.aqi_now.loc[holdout]
     champ_pred = pd.Series(champion.predict(ds.X.loc[holdout], naive_hold), index=holdout)
     champ_metrics = score(y_hold, champ_pred, naive_hold)
+    champ_summary = {k: (None if isinstance(v, float) and np.isnan(v) else round(v, 4))
+                     for k, v in champ_metrics.items()}
     champ_err = (champ_pred - y_hold).abs()
 
     trials: list[dict[str, Any]] = []
@@ -123,7 +130,8 @@ def run_retraining(ds: Dataset, now: pd.Timestamp, champion: ForecastModel, mcfg
         fitted[len(trials)] = (model, pred)
         trials.append({"name": label or f"{kind}/{strategy}", "kind": kind, "strategy": strategy,
                        "params": dict(params), "n_train": int(len(rows)),
-                       "mae": round(metrics["mae"], 3), "rel_mae": round(metrics["rel_mae"], 4),
+                       "mae": round(metrics["mae"], 3),
+                       "rel_mae": None if np.isnan(metrics["rel_mae"]) else round(metrics["rel_mae"], 4),
                        "category_accuracy": round(metrics["category_accuracy"], 4),
                        "seconds": round(time.time() - t, 2)})
 
@@ -133,7 +141,7 @@ def run_retraining(ds: Dataset, now: pd.Timestamp, champion: ForecastModel, mcfg
             trial(kind, params[kind], strategy)
     if not trials:
         return RetrainOutcome(False, "not enough training data before the holdout window",
-                              champion_metrics=champ_metrics, seconds=time.time() - t0)
+                              champion_metrics=champ_summary, seconds=time.time() - t0)
 
     if tune and "hgb" in mcfg.candidates:
         hgb_trials = [t for t in trials if t["kind"] == "hgb"]
@@ -146,13 +154,14 @@ def run_retraining(ds: Dataset, now: pd.Timestamp, champion: ForecastModel, mcfg
     best_i = min(range(len(trials)), key=lambda i: trials[i]["mae"])
     best, (best_model, best_pred) = trials[best_i], fitted[best_i]
     best_err = (best_pred - y_hold).abs()
-    improvement = (champ_metrics["mae"] - best["mae"]) / champ_metrics["mae"]
+    champ_mae = champ_metrics["mae"]
+    improvement = (champ_mae - best["mae"]) / champ_mae if champ_mae > 0 else 0.0
     prob = paired_block_bootstrap(champ_err, best_err, rcfg.bootstrap_samples, mcfg.random_state)
-    passed = bool(improvement >= rcfg.min_improvement and prob >= rcfg.confidence)
-    gate = {"improvement": round(improvement, 4), "prob_better": round(prob, 3),
+    passed = bool(improvement >= rcfg.min_improvement and not np.isnan(prob) and prob >= rcfg.confidence)
+    gate = {"improvement": round(improvement, 4),
+            "prob_better": None if np.isnan(prob) else round(prob, 3),
             "min_improvement": rcfg.min_improvement, "confidence": rcfg.confidence, "passed": passed,
             "holdout_hours": int(len(holdout)), "holdout_start": str(eval_start)}
-    champ_summary = {k: round(v, 4) for k, v in champ_metrics.items()}
 
     if not passed:
         why = (f"best challenger {best['name']} cut holdout MAE by {improvement:.1%} "

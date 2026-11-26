@@ -20,7 +20,7 @@ import numpy as np
 import pandas as pd
 
 from .config import DataConfig
-from .schema import BOUNDS, COLUMN_BIT, CORE_SENSORS, OBS_COLUMNS, REQUIRED_COLUMNS, STUCK_COLUMNS
+from .schema import BOUNDS, COLUMN_BIT, CORE_SENSORS, OBS_COLUMNS, REQUIRED_COLUMNS, STUCK_COLUMNS, to_utc_naive_dt
 
 
 @dataclass
@@ -43,11 +43,13 @@ class QualityReport:
 def _stuck_mask(values: pd.Series, min_run: int) -> np.ndarray:
     """True where a value belongs to a run of >= min_run identical readings."""
     v = values.to_numpy(dtype=float)
+    if len(v) == 0:
+        return np.zeros(0, dtype=bool)
     valid = ~np.isnan(v)
     change = np.ones(len(v), dtype=bool)
     change[1:] = (v[1:] != v[:-1]) | ~valid[1:] | ~valid[:-1]
     run_id = np.cumsum(change)
-    run_len = pd.Series(run_id).map(pd.Series(run_id).value_counts()).to_numpy()
+    run_len = np.bincount(run_id)[run_id]
     return valid & (run_len >= min_run)
 
 
@@ -65,10 +67,13 @@ def validate_batch(batch: pd.DataFrame, cfg: DataConfig,
     report = QualityReport()
     df = batch.copy()
     if "timestamp" in df.columns:
-        df["timestamp"] = pd.to_datetime(df["timestamp"])
+        df["timestamp"] = to_utc_naive_dt(df["timestamp"])
         df = df.set_index("timestamp")
-    df.index = pd.to_datetime(df.index)
+    else:
+        df.index = to_utc_naive_dt(df.index)
     df.index.name = "timestamp"
+    if df.index.isna().any():
+        raise ValueError("batch contains missing or unparseable timestamps")
     missing_cols = [c for c in REQUIRED_COLUMNS if c not in df.columns]
     if missing_cols:
         raise ValueError(f"batch is missing required columns: {missing_cols}")
@@ -87,9 +92,15 @@ def validate_batch(batch: pd.DataFrame, cfg: DataConfig,
         df["qc_notes"] = pd.Series(dtype="object")
         return df, report
 
-    start = df.index[0]
+    ctx_df = None
     if context is not None and len(context):
-        start = min(start, context.index[-1] + pd.Timedelta(hours=1))
+        ctx_df = context[[c for c in OBS_COLUMNS if c in context.columns]].copy()
+        ctx_df.index = to_utc_naive_dt(ctx_df.index)
+        ctx_df = ctx_df.sort_index()
+
+    start = df.index[0]
+    if ctx_df is not None and len(ctx_df):
+        start = min(start, ctx_df.index[-1] + pd.Timedelta(hours=1))
     full = pd.date_range(start, df.index[-1], freq="h")
     gap = ~full.isin(df.index)
     report.gap_rows = int(gap.sum())
@@ -113,15 +124,19 @@ def validate_batch(batch: pd.DataFrame, cfg: DataConfig,
         bad = ~np.isnan(v) & ((v < lo) | (v > hi))
         report.range_cells += flag(col, bad, "range")
 
-    n_ctx = 0
     joined = df
-    if context is not None and len(context):
-        ctx = context[[c for c in OBS_COLUMNS if c in context.columns]].tail(cfg.stuck_hours * 2)
-        joined = pd.concat([ctx, df])
-        joined = joined[~joined.index.duplicated(keep="last")].sort_index()
-        n_ctx = len(joined) - len(df)
+    if ctx_df is not None and len(ctx_df):
+        ctx_tail = ctx_df.tail(cfg.stuck_hours * 2)
+        joined_idx = ctx_tail.index.union(df.index).sort_values()
+        joined = df[STUCK_COLUMNS].reindex(joined_idx)
+        for col in STUCK_COLUMNS:
+            if col in ctx_tail.columns:
+                missing_in_df = ~joined_idx.isin(df.index)
+                ctx_vals = pd.to_numeric(ctx_tail[col], errors="coerce").reindex(joined_idx)
+                joined.loc[missing_in_df, col] = ctx_vals.loc[missing_in_df]
     for col in STUCK_COLUMNS:
-        stuck = _stuck_mask(joined[col], cfg.stuck_hours)[n_ctx:]
+        stuck = pd.Series(_stuck_mask(joined[col], cfg.stuck_hours), index=joined.index).reindex(
+            df.index, fill_value=False).to_numpy()
         report.stuck_cells += flag(col, stuck, "stuck")
 
     for i in np.flatnonzero(gap):

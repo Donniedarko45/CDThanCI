@@ -6,59 +6,110 @@ stopped and resumed, and every decision can be audited afterwards.
 from __future__ import annotations
 
 import json
+import math
+import os
 import sqlite3
-from contextlib import contextmanager
+import threading
+import urllib.parse
+from contextlib import contextmanager, nullcontext
 from pathlib import Path
 from typing import Any, Iterator
 
 import numpy as np
 import pandas as pd
 
-from .schema import OBS_COLUMNS
+from .schema import OBS_COLUMNS, to_utc_naive, to_utc_naive_dt
 from .validation import apply_mask
 
 TS = "%Y-%m-%d %H:%M:%S"
+REQUIRED_TABLES = {"observations", "predictions", "cycles", "events", "state"}
+
+_UNC_LOCK_GUARD = threading.Lock()
+_UNC_LOCKS: dict[str, threading.RLock] = {}
+
+
+def _unc_lock(abs_path: str) -> threading.RLock:
+    key = abs_path.lower()
+    with _UNC_LOCK_GUARD:
+        lock = _UNC_LOCKS.get(key)
+        if lock is None:
+            lock = threading.RLock()
+            _UNC_LOCKS[key] = lock
+        return lock
+
+
+def _sqlite_target(path: Path) -> tuple[Path | str, bool, str]:
+    """Return ``(connect_target, is_unc, abs_path)``.
+
+    Windows UNC paths (such as ``\\\\wsl.localhost\\...``) do not support Win32
+    byte-range file locking, so SQLite raises ``database is locked`` unless
+    opened with ``?nolock=1`` and synchronised in-process.
+    """
+    abs_path = os.path.abspath(path)
+    if os.name == "nt" and abs_path.startswith("\\\\"):
+        normalized = "\\\\" + abs_path[8:] if abs_path.startswith("\\\\?\\UNC\\") else abs_path
+        posix = Path(normalized).as_posix()
+        return f"file://{urllib.parse.quote(posix)}?nolock=1", True, normalized
+    return path, False, abs_path
 
 
 def _ts(value) -> str:
-    return pd.Timestamp(value).strftime(TS)
+    return to_utc_naive(value).strftime(TS)
 
 
 class Store:
     def __init__(self, path: str | Path):
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        self._target, self._is_unc, abs_path = _sqlite_target(self.path)
+        self._lock = _unc_lock(abs_path) if self._is_unc else nullcontext()
         self._init()
 
     @contextmanager
     def _conn(self) -> Iterator[sqlite3.Connection]:
-        conn = sqlite3.connect(self.path, timeout=30)
-        try:
-            yield conn
-            conn.commit()
-        finally:
-            conn.close()
+        with self._lock:
+            conn = sqlite3.connect(self._target, uri=self._is_unc, timeout=30.0)
+            try:
+                conn.execute("PRAGMA busy_timeout = 30000")
+                yield conn
+                if conn.in_transaction:
+                    conn.commit()
+            except BaseException:
+                if conn.in_transaction:
+                    conn.rollback()
+                raise
+            finally:
+                conn.close()
 
     def _init(self) -> None:
         cols = ", ".join(f"{c} REAL" for c in OBS_COLUMNS)
         with self._conn() as c:
-            c.executescript(f"""
-            CREATE TABLE IF NOT EXISTS observations (
-                timestamp TEXT PRIMARY KEY, {cols},
-                qc_mask INTEGER NOT NULL DEFAULT 0, qc_notes TEXT NOT NULL DEFAULT '');
-            CREATE TABLE IF NOT EXISTS predictions (
-                made_at TEXT NOT NULL, target_time TEXT NOT NULL, model_version TEXT NOT NULL,
-                role TEXT NOT NULL, y_pred REAL, y_model REAL, y_naive REAL,
-                served TEXT NOT NULL DEFAULT 'model', input_ok INTEGER NOT NULL DEFAULT 1,
-                y_true REAL, label_ok INTEGER,
-                PRIMARY KEY (made_at, model_version));
-            CREATE INDEX IF NOT EXISTS idx_pred_target ON predictions (target_time);
-            CREATE TABLE IF NOT EXISTS cycles (cycle_time TEXT PRIMARY KEY, payload TEXT NOT NULL);
-            CREATE TABLE IF NOT EXISTS events (
-                id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT NOT NULL, kind TEXT NOT NULL,
-                severity TEXT NOT NULL, message TEXT NOT NULL, payload TEXT NOT NULL DEFAULT '{{}}');
-            CREATE TABLE IF NOT EXISTS state (key TEXT PRIMARY KEY, value TEXT NOT NULL);
-            """)
+            if not self._is_unc:
+                mode = c.execute("PRAGMA journal_mode").fetchone()
+                if mode and str(mode[0]).lower() != "wal":
+                    try:
+                        c.execute("PRAGMA journal_mode = WAL")
+                    except sqlite3.OperationalError:
+                        pass
+            existing = {r[0] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+            if not REQUIRED_TABLES.issubset(existing):
+                c.executescript(f"""
+                CREATE TABLE IF NOT EXISTS observations (
+                    timestamp TEXT PRIMARY KEY, {cols},
+                    qc_mask INTEGER NOT NULL DEFAULT 0, qc_notes TEXT NOT NULL DEFAULT '');
+                CREATE TABLE IF NOT EXISTS predictions (
+                    made_at TEXT NOT NULL, target_time TEXT NOT NULL, model_version TEXT NOT NULL,
+                    role TEXT NOT NULL, y_pred REAL, y_model REAL, y_naive REAL,
+                    served TEXT NOT NULL DEFAULT 'model', input_ok INTEGER NOT NULL DEFAULT 1,
+                    y_true REAL, label_ok INTEGER,
+                    PRIMARY KEY (made_at, model_version));
+                CREATE INDEX IF NOT EXISTS idx_pred_target ON predictions (target_time);
+                CREATE TABLE IF NOT EXISTS cycles (cycle_time TEXT PRIMARY KEY, payload TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT NOT NULL, kind TEXT NOT NULL,
+                    severity TEXT NOT NULL, message TEXT NOT NULL, payload TEXT NOT NULL DEFAULT '{{}}');
+                CREATE TABLE IF NOT EXISTS state (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+                """)
 
     # ---- observations ------------------------------------------------------
     def upsert_observations(self, df: pd.DataFrame) -> int:
@@ -67,7 +118,10 @@ class Store:
             return 0
         cols = ["timestamp"] + OBS_COLUMNS + ["qc_mask", "qc_notes"]
         frame = df.reset_index()
-        frame["timestamp"] = frame["timestamp"].dt.strftime(TS)
+        ts_col = frame.columns[0]
+        if ts_col != "timestamp":
+            frame = frame.rename(columns={ts_col: "timestamp"})
+        frame["timestamp"] = to_utc_naive_dt(frame["timestamp"]).dt.strftime(TS)
         values = frame[cols].astype(object).where(frame[cols].notna(), None).values.tolist()
         sql = f"INSERT OR REPLACE INTO observations ({', '.join(cols)}) VALUES ({', '.join('?' * len(cols))})"
         with self._conn() as c:
@@ -95,10 +149,15 @@ class Store:
         df["timestamp"] = pd.to_datetime(df["timestamp"])
         df = df.set_index("timestamp")
         if df.empty:
+            df[OBS_COLUMNS] = df[OBS_COLUMNS].astype(float)
+            if clean:
+                cleaned = apply_mask(df)
+                cleaned["qc_mask"] = pd.Series(dtype=np.int64, index=cleaned.index)
+                return cleaned
             return df
         df = df.reindex(pd.date_range(df.index[0], df.index[-1], freq="h"))
         df.index.name = "timestamp"
-        df["qc_mask"] = df["qc_mask"].fillna(0).astype(np.int64)
+        df["qc_mask"] = pd.to_numeric(df["qc_mask"], errors="coerce").fillna(0).astype(np.int64)
         df["qc_notes"] = df["qc_notes"].fillna("gap")
         df[OBS_COLUMNS] = df[OBS_COLUMNS].astype(float)
         if clean:
@@ -120,7 +179,7 @@ class Store:
             return 0
         frame = df[cols].copy()
         for col in ("made_at", "target_time"):
-            frame[col] = pd.to_datetime(frame[col]).dt.strftime(TS)
+            frame[col] = to_utc_naive_dt(frame[col]).dt.strftime(TS)
         values = frame.astype(object).where(frame.notna(), None).values.tolist()
         sql = (f"INSERT OR REPLACE INTO predictions ({', '.join(cols)}) "
                f"VALUES ({', '.join('?' * len(cols))})")
@@ -155,6 +214,8 @@ class Store:
 
     def load_predictions(self, start=None, end=None, role: str | None = None,
                          model_version: str | None = None, by: str = "target_time") -> pd.DataFrame:
+        if by not in ("made_at", "target_time"):
+            raise ValueError(f"invalid sort column: {by!r}")
         sql, args, clauses = "SELECT * FROM predictions", [], []
         if start is not None:
             clauses.append(f"{by} > ?")
@@ -180,7 +241,7 @@ class Store:
     def log_cycle(self, cycle_time, payload: dict[str, Any]) -> None:
         with self._conn() as c:
             c.execute("INSERT OR REPLACE INTO cycles (cycle_time, payload) VALUES (?, ?)",
-                      [_ts(cycle_time), json.dumps(payload, default=_json_default)])
+                      [_ts(cycle_time), _json_dumps(payload)])
 
     def load_cycles(self) -> list[dict[str, Any]]:
         with self._conn() as c:
@@ -196,7 +257,7 @@ class Store:
                   payload: dict[str, Any] | None = None) -> None:
         with self._conn() as c:
             c.execute("INSERT INTO events (ts, kind, severity, message, payload) VALUES (?, ?, ?, ?, ?)",
-                      [_ts(ts), kind, severity, message, json.dumps(payload or {}, default=_json_default)])
+                      [_ts(ts), kind, severity, message, _json_dumps(payload or {})])
 
     def load_events(self, limit: int | None = None) -> list[dict[str, Any]]:
         sql = "SELECT ts, kind, severity, message, payload FROM events ORDER BY id"
@@ -214,18 +275,42 @@ class Store:
     def set_state(self, key: str, value: Any) -> None:
         with self._conn() as c:
             c.execute("INSERT OR REPLACE INTO state (key, value) VALUES (?, ?)",
-                      [key, json.dumps(value, default=_json_default)])
+                      [key, _json_dumps(value)])
+
+
+def _sanitize_json(obj: Any) -> Any:
+    if isinstance(obj, dict):
+        return {k: _sanitize_json(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_sanitize_json(v) for v in obj]
+    if isinstance(obj, (np.bool_,)):
+        return bool(obj)
+    if isinstance(obj, (np.integer,)):
+        return int(obj)
+    if isinstance(obj, (float, np.floating)):
+        v = float(obj)
+        return None if not math.isfinite(v) else v
+    if isinstance(obj, (pd.Timestamp,)):
+        return _ts(obj)
+    if isinstance(obj, np.ndarray):
+        return _sanitize_json(obj.tolist())
+    return obj
+
+
+def _json_dumps(obj: Any) -> str:
+    return json.dumps(_sanitize_json(obj), default=_json_default, allow_nan=False)
 
 
 def _json_default(obj):
     if isinstance(obj, (np.integer,)):
         return int(obj)
-    if isinstance(obj, (np.floating,)):
-        return None if np.isnan(obj) else float(obj)
+    if isinstance(obj, (float, np.floating)):
+        v = float(obj)
+        return None if not math.isfinite(v) else v
     if isinstance(obj, (np.bool_,)):
         return bool(obj)
     if isinstance(obj, (pd.Timestamp,)):
-        return obj.strftime(TS)
+        return _ts(obj)
     if isinstance(obj, np.ndarray):
-        return obj.tolist()
+        return _sanitize_json(obj.tolist())
     raise TypeError(f"not JSON serialisable: {type(obj)}")

@@ -28,7 +28,7 @@ aqi-pipeline = "aqi_pipeline.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-aqi_pipeline = ["report_template.html"]
+aqi_pipeline = ["report_template.html", "dashboard.html"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

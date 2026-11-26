@@ -46,7 +46,7 @@ def category(aqi) -> np.ndarray:
 
 
 def category_name(aqi: float) -> str:
-    idx = int(category(aqi))
+    idx = int(np.asarray(category(aqi)).item())
     return CATEGORIES[idx] if idx >= 0 else "Unknown"
 
 
@@ -61,9 +61,15 @@ def compute_aqi(obs: pd.DataFrame) -> pd.DataFrame:
     for pol, (window, min_valid) in AVERAGING.items():
         if pol not in obs.columns:
             continue
-        mean = obs[pol].rolling(window, min_periods=min_valid).mean()
+        series = pd.to_numeric(obs[pol], errors="coerce")
+        mean = series.rolling(window, min_periods=min_valid).mean()
         subs[f"si_{pol}"] = sub_index(pol, mean.to_numpy())
     si = pd.DataFrame(subs, index=obs.index)
+    if si.empty or si.shape[1] == 0:
+        out = si.copy()
+        out.insert(0, "aqi", np.full(len(obs), np.nan, dtype=float))
+        out.insert(1, "dominant", np.full(len(obs), None, dtype=object))
+        return out
     values = si.to_numpy()
     n_valid = np.sum(~np.isnan(values), axis=1)
     has_pm = np.zeros(len(si), dtype=bool)

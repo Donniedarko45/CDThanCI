@@ -15,12 +15,14 @@ import argparse
 import json
 import sys
 import time
+from pathlib import Path
 
 import pandas as pd
 
 from .config import load_config
 from .pipeline import Pipeline
 from .report import build_report
+from .schema import to_utc_naive
 from .sources import make_source
 
 
@@ -31,21 +33,24 @@ def _pipeline(args, with_source: bool = True) -> Pipeline:
 
 
 def _now(args) -> pd.Timestamp:
-    return pd.Timestamp(args.now) if getattr(args, "now", None) else pd.Timestamp.now("UTC").tz_localize(None).floor("h")
+    return to_utc_naive(args.now) if getattr(args, "now", None) else pd.Timestamp.now("UTC").tz_localize(None).floor("h")
 
 
 def cmd_simulate(args) -> int:
     from .simulate import run_simulation
     overrides = {"run_dir": args.run_dir} if args.run_dir else {}
     cfg = load_config(args.config, overrides)
-    if args.days:
+    if args.days is not None:
+        if args.days <= 0:
+            print("--days must be positive", file=sys.stderr)
+            return 2
         from .simulate import simulation_settings
         sim = simulation_settings(cfg)
-        end = pd.Timestamp(sim["production_start"]) + pd.Timedelta(days=args.days)
+        end = to_utc_naive(sim["production_start"]) + pd.Timedelta(days=args.days)
         cfg.simulation = {**cfg.simulation, "production_end": str(end.date())}
     summary = run_simulation(cfg, verbose=not args.quiet)
     path = build_report(Pipeline(cfg), summary)
-    print(f"\nreport:  {path}\nsummary: {cfg.run_dir}/summary.json")
+    print(f"\nreport:  {path}\nsummary: {Path(cfg.run_dir) / 'summary.json'}")
     return 0
 
 
@@ -54,7 +59,7 @@ def cmd_bootstrap(args) -> int:
     if pipe.source is None:
         print("configure a csv or open_meteo source to bootstrap (or use `simulate`)", file=sys.stderr)
         return 2
-    version = pipe.bootstrap(pd.Timestamp(args.until) if args.until else _now(args))
+    version = pipe.bootstrap(to_utc_naive(args.until) if args.until else _now(args))
     meta = pipe.registry.meta(version)
     print(f"{version}: {meta['kind']} trained on {meta['n_train_rows']} rows, "
           f"backtest MAE {meta['validation']['mae']:.1f} ({meta['validation']['rel_mae']:.2f} x persistence)")
@@ -96,10 +101,10 @@ def cmd_status(args) -> int:
     out = {
         "champion": champion, "shadow": pipe.registry.shadow, "trained_at": meta["trained_at"],
         "model": meta["kind"], "strategy": meta["strategy"], "trigger": meta["trigger"],
-        "last_cycle": last.get("cycle_time"), "decision": last.get("decision", {}).get("action"),
-        "reason": last.get("decision", {}).get("reason"), "safe_mode": last.get("safe_mode"),
-        "performance": last.get("performance"), "drift_level": last.get("drift", {}).get("level"),
-        "drift_score": last.get("drift", {}).get("score"), "drifted_inputs": last.get("drift", {}).get("drifted"),
+        "last_cycle": last.get("cycle_time"), "decision": (last.get("decision") or {}).get("action"),
+        "reason": (last.get("decision") or {}).get("reason"), "safe_mode": last.get("safe_mode"),
+        "performance": last.get("performance"), "drift_level": (last.get("drift") or {}).get("level"),
+        "drift_score": (last.get("drift") or {}).get("score"), "drifted_inputs": (last.get("drift") or {}).get("drifted"),
     }
     print(json.dumps(out, indent=2))
     return 0
@@ -129,9 +134,9 @@ def cmd_serve(args) -> int:
 
     import uvicorn
     if args.config:
-        os.environ["AQI_CONFIG"] = args.config
+        os.environ["AQI_CONFIG"] = str(args.config)
     if args.run_dir:
-        os.environ["AQI_RUN_DIR"] = args.run_dir
+        os.environ["AQI_RUN_DIR"] = str(args.run_dir)
     uvicorn.run("aqi_pipeline.api:app", host=args.host, port=args.port)
     return 0
 

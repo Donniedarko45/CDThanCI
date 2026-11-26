@@ -24,7 +24,7 @@ import numpy as np
 import pandas as pd
 from scipy.signal import lfilter
 
-from .schema import FORECAST, POLLUTANTS, WEATHER
+from .schema import FORECAST, POLLUTANTS, WEATHER, to_utc_naive
 
 # Parameters an ``emission_regime`` event may change.
 REGIME_DEFAULTS = {
@@ -41,6 +41,8 @@ REGIME_DEFAULTS = {
 
 def _ar1(rng: np.random.Generator, n: int, rho: float, sd: float) -> np.ndarray:
     """Stationary AR(1) noise with standard deviation ``sd``."""
+    if n <= 0:
+        return np.empty(0, dtype=float)
     e = rng.normal(0.0, sd * np.sqrt(1.0 - rho ** 2), n)
     e[0] = rng.normal(0.0, sd)
     return lfilter([1.0], [1.0, -rho], e)
@@ -75,12 +77,12 @@ def _regime_arrays(index: pd.DatetimeIndex, events: Iterable[dict]) -> dict[str,
     for ev in events:
         if ev.get("type") != "emission_regime":
             continue
-        start = pd.Timestamp(ev["start"])
+        start = to_utc_naive(ev["start"])
         ramp = float(ev.get("ramp_days", 0.0))
         days = (index - start) / pd.Timedelta(days=1)
         weight = np.clip(days / ramp, 0.0, 1.0) if ramp > 0 else (days >= 0).astype(float)
         if ev.get("end"):
-            weight = np.where(index >= pd.Timestamp(ev["end"]), 0.0, weight)
+            weight = np.where(index >= to_utc_naive(ev["end"]), 0.0, weight)
         for key, new in ev.get("params", {}).items():
             if key not in params:
                 raise KeyError(f"unknown emission_regime parameter: {key}")
@@ -93,11 +95,12 @@ def generate(start: str, end: str, seed: int = 7, events: Iterable[dict] | None 
     events = list(events or [])
     rng = np.random.default_rng(seed)
     tail = 24                                       # extra hours so forecasts exist at the end
-    index = pd.date_range(start, pd.Timestamp(end) + pd.Timedelta(hours=tail - 1), freq="h")
+    start_ts, end_ts = to_utc_naive(start), to_utc_naive(end)
+    index = pd.date_range(start_ts, end_ts + pd.Timedelta(hours=tail - 1), freq="h")
     n = len(index)
-    doy = index.dayofyear.to_numpy().astype(float)
+    doy = index.day_of_year.to_numpy().astype(float)
     hod = index.hour.to_numpy().astype(float)
-    dow = index.dayofweek.to_numpy()
+    dow = index.day_of_week.to_numpy()
     year = index.year.to_numpy()
     regime = _regime_arrays(index, events)
 
@@ -198,8 +201,8 @@ def _apply_sensor_events(df: pd.DataFrame, events: Iterable[dict], rng: np.rando
         kind = ev.get("type")
         if kind == "emission_regime":
             continue
-        start = pd.Timestamp(ev["start"])
-        end = pd.Timestamp(ev["end"]) if ev.get("end") else df.index[-1] + pd.Timedelta(hours=1)
+        start = to_utc_naive(ev["start"])
+        end = to_utc_naive(ev["end"]) if ev.get("end") else df.index[-1] + pd.Timedelta(hours=1)
         mask = (df.index >= start) & (df.index < end)
         columns = ev.get("columns") or [ev["column"]]
         for col in columns:

@@ -29,7 +29,9 @@ import pandas as pd
 from .config import Config
 from .modeling import score, select_and_train, training_rows
 from .pipeline import Pipeline
+from .schema import to_utc_naive
 from .sources import FrameSource
+from .store import _json_default, _sanitize_json
 from .synthetic import generate
 
 DEFAULT_SIMULATION = {
@@ -88,12 +90,15 @@ def run_simulation(cfg: Config, fresh: bool = True, verbose: bool = True) -> dic
     summary["runtime_seconds"] = round(time.time() - t0, 1)
     summary["cycles"] = n_cycles
     with open(run_dir / "summary.json", "w", encoding="utf-8") as fh:
-        json.dump(summary, fh, indent=2)
+        json.dump(_sanitize_json(summary), fh, indent=2, default=_json_default, allow_nan=False)
     if verbose:
         print(f"\n{n_cycles} cycles in {summary['runtime_seconds']} s")
         for name, m in summary["comparison"].items():
-            print(f"  {name:10s} MAE {m['mae']:6.2f}  RMSE {m['rmse']:6.2f}  category accuracy "
-                  f"{m['category_accuracy']:.1%}  retrainings {m['retrainings']}")
+            mae = f"{m['mae']:6.2f}" if m.get("mae") is not None else "   n/a"
+            rmse = f"{m['rmse']:6.2f}" if m.get("rmse") is not None else "   n/a"
+            cat_acc = f"{m['category_accuracy']:.1%}" if m.get("category_accuracy") is not None else "n/a"
+            print(f"  {name:10s} MAE {mae}  RMSE {rmse}  category accuracy "
+                  f"{cat_acc}  retrainings {m['retrainings']}")
     return summary
 
 
@@ -116,7 +121,7 @@ def _print_cycle(now: pd.Timestamp, record: dict[str, Any]) -> None:
 def summarise(pipe: Pipeline, sim: dict[str, Any], first_version: str) -> dict[str, Any]:
     """Score the pipeline and the two baselines on the same production hours."""
     cfg = pipe.cfg
-    start, end = pd.Timestamp(sim["production_start"]), pd.Timestamp(sim["production_end"])
+    start, end = to_utc_naive(sim["production_start"]), to_utc_naive(sim["production_end"])
     ds = pipe._dataset()
     served = pipe.store.load_predictions(role="champion", by="made_at")
     served = served[(served["made_at"] >= start) & (served["target_time"] < end)].set_index("made_at")
@@ -148,8 +153,13 @@ def summarise(pipe: Pipeline, sim: dict[str, Any], first_version: str) -> dict[s
 
     def block(pred: pd.Series, retrainings: int) -> dict[str, Any]:
         m = score(y, pred, naive)
+        if m["n"] == 0:
+            return {"mae": None, "rmse": None, "bias": None, "rel_mae": None,
+                    "category_accuracy": None, "category_within_one": None, "n": 0,
+                    "retrainings": retrainings}
         return {"mae": round(m["mae"], 3), "rmse": round(m["rmse"], 3), "bias": round(m["bias"], 3),
-                "rel_mae": round(m["rel_mae"], 4), "category_accuracy": round(m["category_accuracy"], 4),
+                "rel_mae": None if np.isnan(m["rel_mae"]) else round(m["rel_mae"], 4),
+                "category_accuracy": round(m["category_accuracy"], 4),
                 "category_within_one": round(m["category_within_one"], 4), "n": m["n"],
                 "retrainings": retrainings}
 
@@ -164,19 +174,23 @@ def summarise(pipe: Pipeline, sim: dict[str, Any], first_version: str) -> dict[s
     frame = pd.DataFrame({"y": y, "pipeline": pipeline_pred, "static": static_pred,
                           "scheduled": scheduled_pred, "persistence": naive})
     monthly = []
-    for period, g in frame.groupby(frame.index.to_period("M")):
-        row = {"month": str(period), "n": int(len(g)), "mean_aqi": round(float(g["y"].mean()), 1)}
-        for name in ("pipeline", "static", "scheduled", "persistence"):
-            row[name] = round(float((g[name] - g["y"]).abs().mean()), 2)
-        monthly.append(row)
-    daily = frame.resample("D").apply(lambda g: pd.Series({
-        "y": g["y"].mean(), **{n: (g[n] - g["y"]).abs().mean() for n in ("pipeline", "static", "scheduled", "persistence")}}))
-    daily_records = [{"date": str(d.date()), **{k: (None if pd.isna(v) else round(float(v), 2)) for k, v in r.items()}}
-                     for d, r in daily.iterrows()]
+    daily_records = []
+    if not frame.empty:
+        for period, g in frame.groupby(frame.index.to_period("M")):
+            row = {"month": str(period), "n": int(len(g)), "mean_aqi": round(float(g["y"].mean()), 1)}
+            for name in ("pipeline", "static", "scheduled", "persistence"):
+                row[name] = round(float((g[name] - g["y"]).abs().mean()), 2)
+            monthly.append(row)
+        daily_err = pd.DataFrame({
+            "y": frame["y"],
+            **{n: (frame[n] - frame["y"]).abs() for n in ("pipeline", "static", "scheduled", "persistence")},
+        }).resample("D").mean()
+        daily_records = [{"date": str(d.date()), **{k: (None if pd.isna(v) else round(float(v), 2)) for k, v in r.items()}}
+                         for d, r in daily_err.iterrows()]
 
     cycles = pipe.store.load_cycles()
-    decisions = pd.Series([c["decision"]["action"] for c in cycles]).value_counts().to_dict()
-    safe_hours = int((served.loc[rows, "served"] == "persistence").sum())
+    decisions = pd.Series([c["decision"]["action"] for c in cycles], dtype=object).value_counts().to_dict()
+    safe_hours = int((served.loc[rows, "served"] == "persistence").sum()) if len(rows) else 0
     return {
         "location": cfg.location,
         "period": {"history_start": sim["history_start"], "production_start": sim["production_start"],
