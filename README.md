@@ -95,7 +95,7 @@ API endpoints:
   - `test-matrix`: Python `3.10` and `3.12` test matrix with `pytest --cov=aqi_pipeline`, coverage XML, JUnit XML, and `$GITHUB_STEP_SUMMARY` reporting.
   - `e2e-and-ui`: 15-day simulation, live API endpoint smoke checks, headless Playwright Chromium UI verification across views/horizons/themes, and screenshot + HTML report artifacts.
   - `docker-smoke`: `docker compose config -q`, Buildx build, non-root UID check, seeded container healthcheck, and live HTTP verification.
-- **CD (`.github/workflows/cd.yml`)**: triggers on pushes to `main`, `v*` tags, and `workflow_dispatch`; builds Python distributions and a demo monitoring report, publishes multi-tagged images to `ghcr.io/donniedarko45/cdthanci` with OCI labels and build provenance attestation (`actions/attest-build-provenance`), and creates GitHub Releases on `v*` tags.
+- **CD (`.github/workflows/cd.yml`)**: triggers on pushes to `main`, `v*` tags, and `workflow_dispatch`; builds Python distributions and a demo monitoring report, publishes multi-tagged images to `ghcr.io/donniedarko45/aqi-pipeline` with OCI labels and build provenance attestation (`actions/attest-build-provenance`), and creates GitHub Releases on `v*` tags.
 - **Dependabot (`.github/dependabot.yml`)**: weekly update checks for `pip`, `github-actions`, and `docker`.
 
 ## What it does each cycle
