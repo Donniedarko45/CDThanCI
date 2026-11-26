@@ -1,0 +1,19 @@
+# Example: live data from the Open-Meteo air-quality and weather APIs (no key needed).
+#
+#   aqi-pipeline --config config/open_meteo.example.yaml bootstrap
+#   aqi-pipeline --config config/open_meteo.example.yaml schedule --every 3600
+#
+# Notes:
+# - Open-Meteo values are modelled (CAMS), not station measurements.
+# - The API serves at most 92 past days per request, so the first model is
+#   trained on about three months of history.
+# - This connector was written against the documented API and tested only on a
+#   payload of the documented shape; check the first run's data quality report.
+
+location: New Delhi (Open-Meteo)
+run_dir: runs/delhi
+
+source:
+  type: open_meteo
+  latitude: 28.61
+  longitude: 77.21

@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AQI pipeline monitoring report</title>
+<style>
+.viz-root {
+  color-scheme: light;
+  --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink2: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --border: rgba(11,11,11,0.10);
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --quiet: #b9b8b0;
+  --warn: #fab219; --critical: #d03b3b; --good: #0ca30c; --band: rgba(11,11,11,0.06);
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) .viz-root {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --quiet: #5a5955; --band: rgba(255,255,255,0.07);
+  }
+}
+:root[data-theme="dark"] .viz-root {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --quiet: #5a5955; --band: rgba(255,255,255,0.07);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body.viz-root { background: var(--page); color: var(--ink); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 1120px; margin: 0 auto; padding: 32px 24px 64px; }
+h1 { font-size: 24px; font-weight: 650; margin: 0 0 4px; }
+h2 { font-size: 16px; font-weight: 650; margin: 0 0 2px; }
+.sub { color: var(--ink2); margin: 0; }
+.note { color: var(--ink2); font-size: 13px; margin: 6px 0 0; }
+.banner { margin: 16px 0 0; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--ink2); font-size: 13px; }
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 20px 0; }
+.tile { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+.tile .label { color: var(--ink2); font-size: 13px; }
+.tile .value { font-size: 30px; font-weight: 650; line-height: 1.15; margin-top: 2px; }
+.tile.hero .value { font-size: 48px; }
+.tile .delta { color: var(--ink2); font-size: 13px; margin-top: 2px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; margin: 0 0 16px; }
+.card .sub { font-size: 13px; margin-bottom: 10px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 6px 0 4px; color: var(--ink2); font-size: 13px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.key { width: 16px; height: 0; border-top: 2px solid; display: inline-block; }
+.swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; border: 2px solid var(--ink2); }
+.dot.fill { background: var(--ink2); }
+.chart { position: relative; }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+svg text { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+svg text.lab { fill: var(--ink2); }
+svg text.strong { fill: var(--ink); font-weight: 600; }
+.tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 16px rgba(0,0,0,.12); min-width: 150px; display: none; z-index: 2; }
+.tip .t { color: var(--ink2); margin-bottom: 4px; }
+.tip .r { display: flex; align-items: center; gap: 6px; justify-content: space-between; }
+.tip .r b { font-weight: 650; color: var(--ink); }
+.tip .r span { color: var(--ink2); display: inline-flex; align-items: center; gap: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; padding: 6px 10px 6px 0; border-bottom: 1px solid var(--grid); vertical-align: top; }
+th { color: var(--ink2); font-weight: 600; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+details summary { cursor: pointer; color: var(--ink2); font-size: 13px; margin-top: 8px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.pill { display: inline-block; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border); font-size: 12px; color: var(--ink2); }
+@media (max-width: 820px) { .tiles { grid-template-columns: 1fr 1fr; } .grid2 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body class="viz-root">
+<main>
+  <h1>AQI pipeline monitoring report</h1>
+  <p class="sub" id="subtitle"></p>
+  <div class="banner" id="banner" hidden></div>
+  <div class="tiles" id="tiles"></div>
+
+  <div class="card">
+    <h2>Forecast error over time</h2>
+    <p class="sub">Mean absolute error of 24-hour-ahead AQI forecasts, 7-day rolling mean of daily values. Lower is better.</p>
+    <div class="legend" id="errLegend"></div>
+    <div class="chart" id="errChart"></div>
+    <div class="legend" id="laneLegend"></div>
+    <details><summary>Table view: monthly MAE</summary><div id="monthlyTable"></div></details>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h2>Error by method</h2>
+      <p class="sub">MAE over the whole period, same hours for every method.</p>
+      <div class="chart" id="barChart"></div>
+    </div>
+    <div class="card">
+      <h2>Daily mean AQI: actual and forecast</h2>
+      <p class="sub">The forecast shown is the one served 24 hours earlier.</p>
+      <div class="legend" id="aqiLegend"></div>
+      <div class="chart" id="aqiChart"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Monitoring signals</h2>
+    <p class="sub">What the pipeline watched each cycle. Horizontal rules mark the warning and alarm thresholds.</p>
+    <div class="chart" id="sigChart"></div>
+  </div>
+
+  <div class="card">
+    <h2>Retraining log</h2>
+    <p class="sub">Every attempt, why it was triggered, and what the promotion gate decided.</p>
+    <div id="retrainTable"></div>
+  </div>
+
+  <div class="card">
+    <h2>Model versions</h2>
+    <div id="versionTable"></div>
+  </div>
+
+  <div class="card">
+    <h2>Event log</h2>
+    <details><summary>Show all events</summary><div id="eventTable"></div></details>
+  </div>
+</main>
+<script id="report-data" type="application/json">__DATA__</script>
+<script>
+(function () {
+  const D = JSON.parse(document.getElementById('report-data').textContent);
+  const NS = 'http://www.w3.org/2000/svg';
+  const $ = (id) => document.getElementById(id);
+  const el = (tag, attrs, parent, text) => {
+    const n = document.createElementNS(NS, tag);
+    for (const k in attrs) n.setAttribute(k, attrs[k]);
+    if (text != null) n.textContent = text;
+    if (parent) parent.appendChild(n);
+    return n;
+  };
+  const h = (tag, cls, parent, text) => {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    if (parent) parent.appendChild(n);
+    return n;
+  };
+  const day = (s) => Date.parse(String(s).slice(0, 10) + 'T00:00:00Z');
+  const fmtDate = (t) => new Date(t).toISOString().slice(0, 10);
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const fmt = (v, d) => (v == null || isNaN(v)) ? '–' : Number(v).toFixed(d == null ? 1 : d);
+  const css = (name) => 'var(' + name + ')';
+
+  function rolling(values, w) {
+    return values.map((_, i) => {
+      const part = values.slice(Math.max(0, i - w + 1), i + 1).filter((v) => v != null);
+      return part.length >= Math.min(3, w) ? part.reduce((a, b) => a + b, 0) / part.length : null;
+    });
+  }
+  function niceTicks(max, n) {
+    const raw = max / n, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= raw);
+    const out = [0];
+    while (out[out.length - 1] < max - 1e-9) out.push(+(out[out.length - 1] + step).toFixed(6));
+    return out;
+  }
+  function monthTicks(t0, t1) {
+    const out = [], d = new Date(t0);
+    d.setUTCDate(1);
+    while (d.getTime() <= t1) {
+      if (d.getTime() >= t0) out.push(d.getTime());
+      d.setUTCMonth(d.getUTCMonth() + 1);
+    }
+    return out;
+  }
+  function pathOf(xs, ys, X, Y) {
+    let d = '', pen = false;
+    for (let i = 0; i < xs.length; i++) {
+      if (ys[i] == null) { pen = false; continue; }
+      d += (pen ? 'L' : 'M') + X(xs[i]).toFixed(1) + ' ' + Y(ys[i]).toFixed(1);
+      pen = true;
+    }
+    return d;
+  }
+
+  /* A time-series panel: lines, optional threshold rules, crosshair tooltip. */
+  function linePanel(svg, box, xs, series, opt) {
+    const t0 = opt.t0, t1 = opt.t1;
+    const X = (t) => box.x + (t - t0) / (t1 - t0) * box.w;
+    let max = opt.max || 0;
+    if (!opt.max) series.forEach((s) => s.values.forEach((v) => { if (v != null && v > max) max = v; }));
+    (opt.rules || []).forEach((r) => { if (r.value > max) max = r.value; });
+    if (opt.cap) max = Math.min(max, opt.cap);
+    const ticks = niceTicks(max, opt.ticks || 4);
+    const top = ticks[ticks.length - 1];
+    const Y = (v) => box.y + box.h - Math.min(v, top) / top * box.h;
+    ticks.forEach((v) => {
+      el('line', { x1: box.x, x2: box.x + box.w, y1: Y(v), y2: Y(v), stroke: css(v === 0 ? '--axis' : '--grid'), 'stroke-width': 1 }, svg);
+      el('text', { x: box.x - 8, y: Y(v) + 4, 'text-anchor': 'end' }, svg, String(v));
+    });
+    if (opt.title) el('text', { x: box.x, y: box.y - 8, class: 'lab' }, svg, opt.title);
+    let lastLabelY = Infinity;
+    (opt.rules || []).slice().sort((a, b) => a.value - b.value).forEach((r) => {
+      el('line', { x1: box.x, x2: box.x + box.w, y1: Y(r.value), y2: Y(r.value), stroke: css(r.color), 'stroke-width': 1 }, svg);
+      const ly = Math.min(Y(r.value) + 4, lastLabelY - 13);
+      el('text', { x: box.x + box.w + 6, y: ly, class: 'lab' }, svg, r.label);
+      lastLabelY = ly;
+    });
+    series.forEach((s) => {
+      el('path', { d: pathOf(xs, s.values, X, Y), fill: 'none', stroke: css(s.color), 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }, svg);
+    });
+    if (opt.endLabels) {
+      const ends = series.map((s) => {
+        let i = s.values.length - 1;
+        while (i > 0 && s.values[i] == null) i--;
+        return { s, i, y: Y(s.values[i]) };
+      }).sort((a, b) => a.y - b.y);
+      ends.forEach((e) => {
+        el('circle', { cx: X(xs[e.i]), cy: e.y, r: 4, fill: css(e.s.color), stroke: css('--surface'), 'stroke-width': 2 }, svg);
+      });
+    }
+    return { X, Y, top };
+  }
+  function xAxis(svg, box, t0, t1, X) {
+    let lastEnd = -Infinity;
+    monthTicks(t0, t1).forEach((t) => {
+      const d = new Date(t);
+      el('line', { x1: X(t), x2: X(t), y1: box.y + box.h, y2: box.y + box.h + 4, stroke: css('--axis') }, svg);
+      const label = MONTHS[d.getUTCMonth()] + (d.getUTCMonth() === 0 ? ' ' + d.getUTCFullYear() : '');
+      const x = X(t) + 3, width = label.length * 6.2;
+      if (x < lastEnd + 8 || x + width > box.x + box.w + 30) return;
+      el('text', { x, y: box.y + box.h + 16 }, svg, label);
+      lastEnd = x + width;
+    });
+  }
+  function attachHover(host, svg, W, H, box, xs, X, rows, panels) {
+    const tip = h('div', 'tip', host);
+    const hair = el('line', { y1: panels.y0, y2: panels.y1, stroke: css('--muted'), 'stroke-width': 1, visibility: 'hidden' }, svg);
+    const hit = el('rect', { x: box.x, y: panels.y0, width: box.w, height: panels.y1 - panels.y0, fill: 'transparent', tabindex: 0 }, svg);
+    function show(i) {
+      const x = X(xs[i]);
+      hair.setAttribute('x1', x); hair.setAttribute('x2', x); hair.setAttribute('visibility', 'visible');
+      tip.textContent = '';
+      h('div', 't', tip, fmtDate(xs[i]));
+      rows(i).forEach((r) => {
+        const row = h('div', 'r', tip);
+        const name = h('span', null, row);
+        if (r.color) { const k = h('i', 'key', name); k.style.borderColor = css(r.color); }
+        name.appendChild(document.createTextNode(r.name));
+        h('b', null, row, r.value);
+      });
+      tip.style.display = 'block';
+      const scale = svg.getBoundingClientRect().width / W;
+      const left = x * scale + 14, wTip = tip.offsetWidth;
+      tip.style.left = (left + wTip > svg.getBoundingClientRect().width ? x * scale - wTip - 14 : left) + 'px';
+      tip.style.top = (panels.y0 * scale) + 'px';
+    }
+    function hide() { tip.style.display = 'none'; hair.setAttribute('visibility', 'hidden'); }
+    let cur = xs.length - 1;
+    hit.addEventListener('pointermove', (ev) => {
+      const r = svg.getBoundingClientRect();
+      const t = (ev.clientX - r.left) / r.width * W;
+      let best = 0, bd = Infinity;
+      xs.forEach((v, i) => { const d = Math.abs(X(v) - t); if (d < bd) { bd = d; best = i; } });
+      cur = best; show(best);
+    });
+    hit.addEventListener('pointerleave', hide);
+    hit.addEventListener('focus', () => show(cur));
+    hit.addEventListener('blur', hide);
+    hit.addEventListener('keydown', (ev) => {
+      if (ev.key === 'ArrowLeft') { cur = Math.max(0, cur - 1); show(cur); }
+      if (ev.key === 'ArrowRight') { cur = Math.min(xs.length - 1, cur + 1); show(cur); }
+    });
+  }
+  function legend(host, items) {
+    items.forEach((it) => {
+      const s = h('span', null, host);
+      const k = h('i', it.kind || 'key', s);
+      if ((it.kind || 'key') === 'key') k.style.borderColor = css(it.color);
+      else if (it.kind === 'swatch') k.style.background = css(it.color);
+      s.appendChild(document.createTextNode(it.name));
+    });
+  }
+  function table(host, cols, rows) {
+    const t = h('table', null, host), head = h('tr', null, h('thead', null, t)), body = h('tbody', null, t);
+    cols.forEach((c) => h('th', c.num ? 'num' : null, head, c.name));
+    rows.forEach((r) => { const tr = h('tr', null, body); cols.forEach((c) => h('td', c.num ? 'num' : null, tr, c.get(r))); });
+  }
+
+  /* ---------- header and tiles ---------- */
+  const cmp = D.comparison || {};
+  const P = cmp.pipeline || {};
+  $('subtitle').textContent = D.location + ' · ' + D.period.production_start.slice(0, 10) + ' to ' + D.period.production_end.slice(0, 10) + ' · generated ' + D.generated_at;
+  if (D.simulated) {
+    $('banner').hidden = false;
+    $('banner').textContent = 'Simulated data. The station, its readings and the injected events are synthetic; the numbers show how the pipeline behaves, not real air quality.';
+  }
+  const tiles = $('tiles');
+  function tile(label, value, delta, hero) {
+    const t = h('div', 'tile' + (hero ? ' hero' : ''), tiles);
+    h('div', 'label', t, label); h('div', 'value', t, value); if (delta) h('div', 'delta', t, delta);
+  }
+  const vs = cmp.scheduled ? ((1 - P.mae / cmp.scheduled.mae) * 100).toFixed(0) + '% lower than fixed-schedule retraining' : (cmp.persistence ? 'persistence: ' + fmt(cmp.persistence.mae) : '');
+  tile('Forecast MAE (AQI points)', fmt(P.mae), vs, true);
+  tile('AQI category predicted correctly', P.category_accuracy != null ? (P.category_accuracy * 100).toFixed(0) + '%' : '–', P.category_within_one != null ? (P.category_within_one * 100).toFixed(0) + '% within one category' : '');
+  tile('Retraining attempts', String(D.retraining.attempts), D.retraining.promotions + ' promoted · ' + D.retraining.rejected + ' rejected · ' + D.retraining.rollbacks + ' rolled back');
+  tile('Hours in safe mode', D.scored_hours ? ((D.safe_mode_hours / D.scored_hours) * 100).toFixed(0) + '%' : '–', 'persistence served instead of the model');
+
+  /* ---------- error over time with lanes ---------- */
+  const days = D.daily.map((r) => day(r.date));
+  const t0 = days[0], t1 = days[days.length - 1];
+  const hasBase = D.daily.some((r) => r.scheduled != null);
+  const errSeries = [{ key: 'pipeline', name: 'This pipeline', color: '--s1' }]
+    .concat(hasBase ? [{ key: 'scheduled', name: 'Fixed monthly retraining', color: '--s2' }] : [])
+    .concat([{ key: 'persistence', name: 'Persistence (tomorrow = today)', color: '--s3' }]);
+  errSeries.forEach((s) => { s.values = rolling(D.daily.map((r) => r[s.key]), 7); });
+  legend($('errLegend'), errSeries);
+  (function () {
+    const W = 1080, lanes = [
+      { name: 'Live model', items: D.version_spans.map((v) => ({ a: day(v.start), b: day(v.end), label: v.version, alt: true })) },
+      { name: 'Safe mode', items: D.safe_spans.map((v) => ({ a: day(v.start), b: day(v.end) })), solid: true },
+      { name: 'Hold (bad data)', items: D.hold_spans.map((v) => ({ a: day(v.start), b: day(v.end) })), solid: true },
+    ].filter((l) => l.items.length);
+    const inj = (D.injected_events || []).map((e, i) => ({ n: i + 1, a: day(e.start), b: e.end ? day(e.end) : null, label: e.label || e.type, start: e.start, end: e.end }));
+    const box = { x: 44, y: 16, w: W - 44 - 150, h: 250 };
+    const laneH = 22, laneY0 = box.y + box.h + 34 + (inj.length ? laneH : 0);
+    const H = laneY0 + (lanes.length + 1) * laneH + 12;
+    const svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': 'Forecast error over time by method, with events and model versions' }, $('errChart'));
+    const sc = linePanel(svg, box, days, errSeries, { t0, t1, endLabels: true, ticks: 5 });
+    xAxis(svg, box, t0, t1, sc.X);
+    // direct end labels, nudged apart with leader-free spacing
+    const ends = errSeries.map((s) => { let i = s.values.length - 1; while (i > 0 && s.values[i] == null) i--; return { s, y: sc.Y(s.values[i]) }; }).sort((a, b) => a.y - b.y);
+    for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 14) ends[i].y = ends[i - 1].y + 14;
+    ends.forEach((e) => el('text', { x: box.x + box.w + 10, y: e.y + 4, class: 'lab' }, svg, e.s.name.split(' (')[0]));
+    if (inj.length) {
+      const iy = laneY0 - laneH;
+      el('text', { x: box.x + box.w + 10, y: iy + laneH / 2 + 4, class: 'lab' }, svg, 'Injected events');
+      let lastX = -Infinity;
+      inj.forEach((e) => {
+        const x0 = sc.X(e.a), x = Math.max(x0, lastX + 18);
+        lastX = x;
+        if (e.b) el('rect', { x, y: iy + 8, width: Math.max(sc.X(e.b) - x, 3), height: 6, rx: 3, fill: css('--quiet') }, svg);
+        else el('path', { d: 'M' + x + ' ' + (iy + 11) + 'H' + (box.x + box.w), stroke: css('--quiet'), 'stroke-width': 2 }, svg);
+        el('circle', { cx: x, cy: iy + 11, r: 8, fill: css('--surface'), stroke: css('--ink2'), 'stroke-width': 1.5 }, svg);
+        el('text', { x, y: iy + 15, 'text-anchor': 'middle', class: 'strong' }, svg, String(e.n));
+      });
+      const list = h('div', 'note', $('errChart').parentNode);
+      list.textContent = 'Injected events: ' + inj.map((e) => e.n + ' ' + e.label + ' (' + e.start.slice(0, 10) + (e.end ? ' to ' + e.end.slice(0, 10) : ' onwards') + ')').join(' · ');
+      $('errChart').parentNode.insertBefore(list, $('laneLegend').nextSibling);
+    }
+    // retraining markers on their own lane, first
+    const ry = laneY0 + laneH / 2;
+    el('text', { x: box.x + box.w + 10, y: ry + 4, class: 'lab' }, svg, 'Retraining');
+    D.retrain_log.forEach((r) => {
+      const x = sc.X(day(r.date));
+      if (r.outcome === 'promoted') el('circle', { cx: x, cy: ry, r: 5, fill: css('--ink2'), stroke: css('--surface'), 'stroke-width': 2 }, svg);
+      else el('circle', { cx: x, cy: ry, r: 4, fill: css('--surface'), stroke: css('--ink2'), 'stroke-width': 2 }, svg);
+      el('title', {}, svg.lastChild, r.date + ': ' + r.outcome + ' (' + r.trigger + ')');
+    });
+    D.rollbacks.forEach((r) => {
+      const x = sc.X(day(r.date));
+      el('path', { d: 'M' + (x - 5) + ' ' + (ry - 5) + 'L' + (x + 5) + ' ' + (ry + 5) + 'M' + (x + 5) + ' ' + (ry - 5) + 'L' + (x - 5) + ' ' + (ry + 5), stroke: css('--critical'), 'stroke-width': 2.5, 'stroke-linecap': 'round' }, svg);
+    });
+    lanes.forEach((lane, li) => {
+      const y = laneY0 + (li + 1) * laneH;
+      el('text', { x: box.x + box.w + 10, y: y + laneH / 2 + 4, class: 'lab' }, svg, lane.name);
+      lane.items.forEach((it, k) => {
+        const x = sc.X(Math.max(it.a, t0)), w = Math.max(sc.X(Math.min(it.b, t1)) - x - 2, 3);
+        el('rect', { x, y: y + 4, width: w, height: laneH - 8, rx: 3, fill: css(lane.solid ? '--quiet' : (it.alt && k % 2 ? '--band' : '--grid')) }, svg);
+        if (it.label && w > it.label.length * 6.2 + 8) el('text', { x: x + 5, y: y + laneH / 2 + 4, class: 'lab' }, svg, it.label);
+        else if (it.label) el('title', {}, svg.lastChild, it.label);
+      });
+    });
+    attachHover($('errChart'), svg, W, H, box, days, sc.X, (i) => errSeries.map((s) => ({ name: s.name.split(' (')[0], color: s.color, value: fmt(s.values[i]) })).concat([{ name: 'Live model', value: D.daily[i].champion || '–' }]), { y0: box.y, y1: laneY0 + (lanes.length + 1) * laneH });
+    legend($('laneLegend'), [{ kind: 'dot fill', name: 'Retrained and promoted' }, { kind: 'dot', name: 'Retrained, challenger rejected' }].concat(D.rollbacks.length ? [{ kind: 'swatch', color: '--critical', name: 'Rollback (×)' }] : []));
+    const cols = [{ name: 'Month', get: (r) => r.month }, { name: 'Mean AQI', num: true, get: (r) => fmt(r.mean_aqi, 0) }, { name: 'This pipeline', num: true, get: (r) => fmt(r.pipeline) }]
+      .concat(hasBase ? [{ name: 'Fixed monthly', num: true, get: (r) => fmt(r.scheduled) }, { name: 'Never retrained', num: true, get: (r) => fmt(r.static) }] : [])
+      .concat([{ name: 'Persistence', num: true, get: (r) => fmt(r.persistence) }]);
+    table($('monthlyTable'), cols, D.monthly_mae);
+  })();
+
+  /* ---------- bars: error by method ---------- */
+  (function () {
+    const items = [['pipeline', 'This pipeline'], ['scheduled', 'Fixed monthly retraining'], ['persistence', 'Persistence'], ['static', 'Never retrained']]
+      .filter((k) => cmp[k[0]]).map((k) => ({ name: k[1], v: cmp[k[0]].mae, hi: k[0] === 'pipeline' }));
+    const W = 520, rowH = 44, x0 = 170, H = items.length * rowH + 8, max = Math.max.apply(null, items.map((i) => i.v));
+    const svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': 'Mean absolute error by method' }, $('barChart'));
+    el('line', { x1: x0, x2: x0, y1: 0, y2: H, stroke: css('--axis') }, svg);
+    items.forEach((it, i) => {
+      const y = i * rowH + rowH / 2 + 4, w = it.v / max * (W - x0 - 60);
+      el('text', { x: x0 - 10, y: y + 4, 'text-anchor': 'end', class: 'lab' }, svg, it.name);
+      const bar = el('path', { d: 'M' + x0 + ' ' + (y - 9) + 'h' + (w - 4) + 'a4 4 0 0 1 4 4v10a4 4 0 0 1 -4 4h' + (-(w - 4)) + 'z', fill: css(it.hi ? '--s1' : '--quiet'), tabindex: 0 }, svg);
+      el('title', {}, bar, it.name + ': MAE ' + fmt(it.v, 2));
+      el('text', { x: x0 + w + 8, y: y + 4, class: 'strong' }, svg, fmt(it.v));
+    });
+  })();
+
+  /* ---------- actual vs forecast AQI ---------- */
+  (function () {
+    const W = 520, H = 230, box = { x: 40, y: 14, w: W - 40 - 14, h: 176 };
+    const series = [{ name: 'Actual', color: '--quiet', values: D.daily.map((r) => r.y) }, { name: 'Forecast', color: '--s1', values: D.daily.map((r) => r.forecast) }];
+    legend($('aqiLegend'), series);
+    const svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': 'Daily mean AQI, actual and forecast' }, $('aqiChart'));
+    const sc = linePanel(svg, box, days, series, { t0, t1, ticks: 5 });
+    xAxis(svg, box, t0, t1, sc.X);
+    attachHover($('aqiChart'), svg, W, H, box, days, sc.X, (i) => series.map((s) => ({ name: s.name, color: s.color, value: fmt(s.values[i], 0) })), { y0: box.y, y1: box.y + box.h });
+  })();
+
+  /* ---------- monitoring signals: small multiples, shared x ---------- */
+  (function () {
+    const cyc = D.cycles, xs = cyc.map((c) => day(c.date));
+    const W = 1080, ph = 96, gap = 44, x0 = 44, w = W - 44 - 150;
+    const panels = [
+      { title: 'Accuracy ratio (error / expected error)', key: 'ratio', color: '--s1', cap: 4, rules: [{ value: D.thresholds.perf_warn, color: '--warn', label: 'warning ' + D.thresholds.perf_warn }, { value: D.thresholds.perf_critical, color: '--critical', label: 'alarm ' + D.thresholds.perf_critical }] },
+      { title: 'Input drift score (share of model reliance on drifted inputs)', key: 'drift', color: '--s1', rules: [{ value: D.thresholds.drift_warn, color: '--warn', label: 'warning ' + D.thresholds.drift_warn }, { value: D.thresholds.drift_alert, color: '--critical', label: 'alarm ' + D.thresholds.drift_alert }] },
+      { title: 'Accumulated excess error (CUSUM)', key: 'cusum', color: '--s1', rules: [{ value: D.thresholds.cusum_alarm, color: '--critical', label: 'alarm ' + D.thresholds.cusum_alarm }] },
+    ];
+    const H = panels.length * (ph + gap) + 6;
+    const svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': 'Monitoring signals per cycle' }, $('sigChart'));
+    let X = null;
+    panels.forEach((p, i) => {
+      const box = { x: x0, y: 22 + i * (ph + gap), w, h: ph };
+      const sc = linePanel(svg, box, xs, [{ color: p.color, values: cyc.map((c) => c[p.key]) }], { t0, t1, title: p.title, rules: p.rules, cap: p.cap, ticks: 3 });
+      xAxis(svg, box, t0, t1, sc.X); X = sc.X;
+    });
+    attachHover($('sigChart'), svg, W, H, { x: x0, w }, xs, X, (i) => [
+      { name: 'Accuracy ratio', value: fmt(cyc[i].ratio, 2) }, { name: 'Drift score', value: fmt(cyc[i].drift, 2) },
+      { name: 'CUSUM', value: fmt(cyc[i].cusum, 2) }, { name: 'Decision', value: cyc[i].action }, { name: 'Live model', value: cyc[i].champion },
+    ], { y0: 22, y1: H - gap + 8 });
+  })();
+
+  /* ---------- tables ---------- */
+  table($('retrainTable'), [
+    { name: 'Date', get: (r) => r.date }, { name: 'Trigger', get: (r) => r.trigger }, { name: 'Outcome', get: (r) => r.outcome + (r.version ? ' ' + r.version : '') },
+    { name: 'Champion MAE', num: true, get: (r) => fmt(r.champion_mae) }, { name: 'Best challenger', get: (r) => r.best }, { name: 'Challenger MAE', num: true, get: (r) => fmt(r.best_mae) },
+    { name: 'P(better)', num: true, get: (r) => fmt(r.prob, 2) }, { name: 'Trials', num: true, get: (r) => String(r.trials) },
+  ], D.retrain_log);
+  table($('versionTable'), [
+    { name: 'Version', get: (r) => r.version }, { name: 'Stage', get: (r) => r.stage }, { name: 'Trained', get: (r) => String(r.trained_at).slice(0, 10) },
+    { name: 'Trigger', get: (r) => r.trigger }, { name: 'Model', get: (r) => r.kind }, { name: 'Data strategy', get: (r) => r.strategy },
+    { name: 'Training rows', num: true, get: (r) => String(r.n_train_rows) }, { name: 'Validation MAE', num: true, get: (r) => fmt(r.val_mae) },
+    { name: 'Expected error vs persistence', num: true, get: (r) => fmt(r.ref_rel_mae, 2) },
+  ], D.versions);
+  table($('eventTable'), [{ name: 'Time', get: (r) => r.ts.slice(0, 10) }, { name: 'Kind', get: (r) => r.kind }, { name: 'Message', get: (r) => r.message }], D.events);
+})();
+</script>
+</body>
+</html>

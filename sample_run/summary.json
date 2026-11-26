@@ -1,0 +1,3316 @@
+{
+  "location": "SIM-01 (synthetic)",
+  "period": {
+    "history_start": "2025-03-01",
+    "production_start": "2025-09-01",
+    "production_end": "2026-09-01"
+  },
+  "seed": 7,
+  "injected_events": [
+    {
+      "type": "sensor_stuck",
+      "column": "pm25",
+      "start": "2025-09-18",
+      "end": "2025-09-23",
+      "label": "PM2.5 sensor stuck"
+    },
+    {
+      "type": "sensor_dropout",
+      "columns": [
+        "pm10",
+        "no2"
+      ],
+      "start": "2025-09-19",
+      "end": "2025-09-22",
+      "rate": 0.7,
+      "label": "PM10 and NO2 dropouts"
+    },
+    {
+      "type": "sensor_bias",
+      "column": "pm10",
+      "start": "2026-03-10",
+      "factor": 1.3,
+      "label": "PM10 analyser recalibrated (+30%)"
+    },
+    {
+      "type": "emission_regime",
+      "start": "2026-05-20",
+      "ramp_days": 15,
+      "params": {
+        "ozone_scale": 2.8
+      },
+      "label": "Ozone regime (precursor emissions up)"
+    }
+  ],
+  "scored_hours": 8585,
+  "comparison": {
+    "pipeline": {
+      "mae": 23.788,
+      "rmse": 37.167,
+      "bias": 0.876,
+      "rel_mae": 0.833,
+      "category_accuracy": 0.733,
+      "category_within_one": 0.9861,
+      "n": 8585,
+      "retrainings": 12,
+      "promotions": 6
+    },
+    "static": {
+      "mae": 69.669,
+      "rmse": 108.003,
+      "bias": -66.751,
+      "rel_mae": 2.4397,
+      "category_accuracy": 0.493,
+      "category_within_one": 0.7703,
+      "n": 8585,
+      "retrainings": 0
+    },
+    "scheduled": {
+      "mae": 29.24,
+      "rmse": 54.658,
+      "bias": -10.9,
+      "rel_mae": 1.0239,
+      "category_accuracy": 0.7093,
+      "category_within_one": 0.9539,
+      "n": 8585,
+      "retrainings": 12
+    },
+    "persistence": {
+      "mae": 28.557,
+      "rmse": 42.917,
+      "bias": -0.032,
+      "rel_mae": 1.0,
+      "category_accuracy": 0.6726,
+      "category_within_one": 0.9793,
+      "n": 8585,
+      "retrainings": 0
+    }
+  },
+  "monthly_mae": [
+    {
+      "month": "2025-09",
+      "n": 569,
+      "mean_aqi": 60.5,
+      "pipeline": 6.63,
+      "static": 6.63,
+      "scheduled": 6.63,
+      "persistence": 12.52
+    },
+    {
+      "month": "2025-10",
+      "n": 744,
+      "mean_aqi": 209.7,
+      "pipeline": 39.65,
+      "static": 118.41,
+      "scheduled": 115.93,
+      "persistence": 35.0
+    },
+    {
+      "month": "2025-11",
+      "n": 720,
+      "mean_aqi": 271.7,
+      "pipeline": 49.12,
+      "static": 169.75,
+      "scheduled": 41.71,
+      "persistence": 57.65
+    },
+    {
+      "month": "2025-12",
+      "n": 744,
+      "mean_aqi": 285.8,
+      "pipeline": 31.05,
+      "static": 192.16,
+      "scheduled": 35.35,
+      "persistence": 39.2
+    },
+    {
+      "month": "2026-01",
+      "n": 744,
+      "mean_aqi": 209.4,
+      "pipeline": 32.01,
+      "static": 116.77,
+      "scheduled": 25.79,
+      "persistence": 40.39
+    },
+    {
+      "month": "2026-02",
+      "n": 672,
+      "mean_aqi": 150.9,
+      "pipeline": 26.98,
+      "static": 56.57,
+      "scheduled": 27.76,
+      "persistence": 33.95
+    },
+    {
+      "month": "2026-03",
+      "n": 744,
+      "mean_aqi": 121.9,
+      "pipeline": 17.11,
+      "static": 34.4,
+      "scheduled": 16.78,
+      "persistence": 27.64
+    },
+    {
+      "month": "2026-04",
+      "n": 720,
+      "mean_aqi": 87.7,
+      "pipeline": 10.9,
+      "static": 11.97,
+      "scheduled": 10.36,
+      "persistence": 16.39
+    },
+    {
+      "month": "2026-05",
+      "n": 744,
+      "mean_aqi": 95.7,
+      "pipeline": 16.61,
+      "static": 19.46,
+      "scheduled": 15.31,
+      "persistence": 23.57
+    },
+    {
+      "month": "2026-06",
+      "n": 720,
+      "mean_aqi": 113.4,
+      "pipeline": 19.55,
+      "static": 46.87,
+      "scheduled": 19.79,
+      "persistence": 18.56
+    },
+    {
+      "month": "2026-07",
+      "n": 744,
+      "mean_aqi": 79.4,
+      "pipeline": 19.3,
+      "static": 27.19,
+      "scheduled": 17.57,
+      "persistence": 21.37
+    },
+    {
+      "month": "2026-08",
+      "n": 720,
+      "mean_aqi": 65.9,
+      "pipeline": 12.72,
+      "static": 18.72,
+      "scheduled": 11.34,
+      "persistence": 12.93
+    }
+  ],
+  "daily": [
+    {
+      "date": "2025-09-01",
+      "y": 60.39,
+      "pipeline": 7.03,
+      "static": 7.03,
+      "scheduled": 7.03,
+      "persistence": 3.21
+    },
+    {
+      "date": "2025-09-02",
+      "y": 73.16,
+      "pipeline": 10.76,
+      "static": 10.75,
+      "scheduled": 10.75,
+      "persistence": 12.84
+    },
+    {
+      "date": "2025-09-03",
+      "y": 74.5,
+      "pipeline": 3.95,
+      "static": 3.95,
+      "scheduled": 3.95,
+      "persistence": 4.4
+    },
+    {
+      "date": "2025-09-04",
+      "y": 70.58,
+      "pipeline": 4.06,
+      "static": 4.06,
+      "scheduled": 4.06,
+      "persistence": 4.16
+    },
+    {
+      "date": "2025-09-05",
+      "y": 49.12,
+      "pipeline": 8.95,
+      "static": 8.95,
+      "scheduled": 8.95,
+      "persistence": 21.45
+    },
+    {
+      "date": "2025-09-06",
+      "y": 44.01,
+      "pipeline": 4.41,
+      "static": 4.41,
+      "scheduled": 4.41,
+      "persistence": 7.26
+    },
+    {
+      "date": "2025-09-07",
+      "y": 51.1,
+      "pipeline": 4.35,
+      "static": 4.35,
+      "scheduled": 4.35,
+      "persistence": 7.09
+    },
+    {
+      "date": "2025-09-08",
+      "y": 65.56,
+      "pipeline": 3.54,
+      "static": 3.54,
+      "scheduled": 3.54,
+      "persistence": 14.46
+    },
+    {
+      "date": "2025-09-09",
+      "y": 51.92,
+      "pipeline": 9.49,
+      "static": 9.49,
+      "scheduled": 9.49,
+      "persistence": 13.64
+    },
+    {
+      "date": "2025-09-10",
+      "y": 47.02,
+      "pipeline": 6.62,
+      "static": 6.62,
+      "scheduled": 6.62,
+      "persistence": 7.3
+    },
+    {
+      "date": "2025-09-11",
+      "y": 76.86,
+      "pipeline": 21.17,
+      "static": 21.17,
+      "scheduled": 21.17,
+      "persistence": 29.84
+    },
+    {
+      "date": "2025-09-12",
+      "y": 67.7,
+      "pipeline": 7.31,
+      "static": 7.31,
+      "scheduled": 7.31,
+      "persistence": 20.74
+    },
+    {
+      "date": "2025-09-13",
+      "y": 45.93,
+      "pipeline": 3.94,
+      "static": 3.94,
+      "scheduled": 3.94,
+      "persistence": 21.77
+    },
+    {
+      "date": "2025-09-14",
+      "y": 55.01,
+      "pipeline": 2.9,
+      "static": 2.9,
+      "scheduled": 2.9,
+      "persistence": 10.08
+    },
+    {
+      "date": "2025-09-15",
+      "y": 57.8,
+      "pipeline": 4.61,
+      "static": 4.61,
+      "scheduled": 4.61,
+      "persistence": 6.81
+    },
+    {
+      "date": "2025-09-16",
+      "y": 60.42,
+      "pipeline": 3.96,
+      "static": 3.96,
+      "scheduled": 3.96,
+      "persistence": 4.97
+    },
+    {
+      "date": "2025-09-17",
+      "y": 51.11,
+      "pipeline": 14.5,
+      "static": 14.5,
+      "scheduled": 14.5,
+      "persistence": 6.99
+    },
+    {
+      "date": "2025-09-18",
+      "y": null,
+      "pipeline": null,
+      "static": null,
+      "scheduled": null,
+      "persistence": null
+    },
+    {
+      "date": "2025-09-19",
+      "y": null,
+      "pipeline": null,
+      "static": null,
+      "scheduled": null,
+      "persistence": null
+    },
+    {
+      "date": "2025-09-20",
+      "y": null,
+      "pipeline": null,
+      "static": null,
+      "scheduled": null,
+      "persistence": null
+    },
+    {
+      "date": "2025-09-21",
+      "y": null,
+      "pipeline": null,
+      "static": null,
+      "scheduled": null,
+      "persistence": null
+    },
+    {
+      "date": "2025-09-22",
+      "y": null,
+      "pipeline": null,
+      "static": null,
+      "scheduled": null,
+      "persistence": null
+    },
+    {
+      "date": "2025-09-23",
+      "y": 56.24,
+      "pipeline": 3.16,
+      "static": 3.16,
+      "scheduled": 3.16,
+      "persistence": 1.24
+    },
+    {
+      "date": "2025-09-24",
+      "y": 61.69,
+      "pipeline": 3.98,
+      "static": 3.98,
+      "scheduled": 3.98,
+      "persistence": 5.6
+    },
+    {
+      "date": "2025-09-25",
+      "y": 83.29,
+      "pipeline": 9.27,
+      "static": 9.27,
+      "scheduled": 9.27,
+      "persistence": 21.6
+    },
+    {
+      "date": "2025-09-26",
+      "y": 61.58,
+      "pipeline": 6.49,
+      "static": 6.49,
+      "scheduled": 6.49,
+      "persistence": 22.1
+    },
+    {
+      "date": "2025-09-27",
+      "y": 46.48,
+      "pipeline": 2.88,
+      "static": 2.88,
+      "scheduled": 2.88,
+      "persistence": 16.16
+    },
+    {
+      "date": "2025-09-28",
+      "y": 53.28,
+      "pipeline": 5.17,
+      "static": 5.16,
+      "scheduled": 5.16,
+      "persistence": 6.8
+    },
+    {
+      "date": "2025-09-29",
+      "y": 74.33,
+      "pipeline": 8.35,
+      "static": 8.35,
+      "scheduled": 8.35,
+      "persistence": 21.04
+    },
+    {
+      "date": "2025-09-30",
+      "y": 64.73,
+      "pipeline": 8.09,
+      "static": 8.09,
+      "scheduled": 8.09,
+      "persistence": 10.65
+    },
+    {
+      "date": "2025-10-01",
+      "y": 57.37,
+      "pipeline": 5.2,
+      "static": 5.2,
+      "scheduled": 4.78,
+      "persistence": 7.44
+    },
+    {
+      "date": "2025-10-02",
+      "y": 59.16,
+      "pipeline": 7.22,
+      "static": 7.21,
+      "scheduled": 7.21,
+      "persistence": 2.04
+    },
+    {
+      "date": "2025-10-03",
+      "y": 60.99,
+      "pipeline": 2.4,
+      "static": 2.4,
+      "scheduled": 2.35,
+      "persistence": 3.08
+    },
+    {
+      "date": "2025-10-04",
+      "y": 53.04,
+      "pipeline": 9.02,
+      "static": 9.02,
+      "scheduled": 8.94,
+      "persistence": 7.95
+    },
+    {
+      "date": "2025-10-05",
+      "y": 51.68,
+      "pipeline": 7.38,
+      "static": 7.38,
+      "scheduled": 7.3,
+      "persistence": 2.0
+    },
+    {
+      "date": "2025-10-06",
+      "y": 53.13,
+      "pipeline": 4.54,
+      "static": 4.54,
+      "scheduled": 4.35,
+      "persistence": 1.53
+    },
+    {
+      "date": "2025-10-07",
+      "y": 62.85,
+      "pipeline": 6.15,
+      "static": 6.15,
+      "scheduled": 5.98,
+      "persistence": 9.9
+    },
+    {
+      "date": "2025-10-08",
+      "y": 99.4,
+      "pipeline": 36.55,
+      "static": 22.04,
+      "scheduled": 20.95,
+      "persistence": 36.55
+    },
+    {
+      "date": "2025-10-09",
+      "y": 142.29,
+      "pipeline": 42.89,
+      "static": 43.4,
+      "scheduled": 44.74,
+      "persistence": 42.89
+    },
+    {
+      "date": "2025-10-10",
+      "y": 132.26,
+      "pipeline": 36.83,
+      "static": 36.83,
+      "scheduled": 40.51,
+      "persistence": 14.1
+    },
+    {
+      "date": "2025-10-11",
+      "y": 110.98,
+      "pipeline": 21.39,
+      "static": 21.39,
+      "scheduled": 25.02,
+      "persistence": 21.28
+    },
+    {
+      "date": "2025-10-12",
+      "y": 197.85,
+      "pipeline": 103.08,
+      "static": 103.08,
+      "scheduled": 105.13,
+      "persistence": 89.2
+    },
+    {
+      "date": "2025-10-13",
+      "y": 286.45,
+      "pipeline": 88.6,
+      "static": 155.49,
+      "scheduled": 159.79,
+      "persistence": 88.59
+    },
+    {
+      "date": "2025-10-14",
+      "y": 235.11,
+      "pipeline": 73.49,
+      "static": 153.46,
+      "scheduled": 157.69,
+      "persistence": 73.49
+    },
+    {
+      "date": "2025-10-15",
+      "y": 151.8,
+      "pipeline": 83.32,
+      "static": 74.04,
+      "scheduled": 77.58,
+      "persistence": 83.32
+    },
+    {
+      "date": "2025-10-16",
+      "y": 136.46,
+      "pipeline": 17.13,
+      "static": 18.03,
+      "scheduled": 19.94,
+      "persistence": 17.13
+    },
+    {
+      "date": "2025-10-17",
+      "y": 180.52,
+      "pipeline": 44.06,
+      "static": 75.09,
+      "scheduled": 77.17,
+      "persistence": 44.06
+    },
+    {
+      "date": "2025-10-18",
+      "y": 217.3,
+      "pipeline": 36.78,
+      "static": 110.91,
+      "scheduled": 117.01,
+      "persistence": 36.78
+    },
+    {
+      "date": "2025-10-19",
+      "y": 314.88,
+      "pipeline": 97.57,
+      "static": 188.5,
+      "scheduled": 199.06,
+      "persistence": 97.57
+    },
+    {
+      "date": "2025-10-20",
+      "y": 336.11,
+      "pipeline": 29.86,
+      "static": 225.1,
+      "scheduled": 235.18,
+      "persistence": 21.23
+    },
+    {
+      "date": "2025-10-21",
+      "y": 330.78,
+      "pipeline": 41.29,
+      "static": 236.03,
+      "scheduled": 243.22,
+      "persistence": 16.47
+    },
+    {
+      "date": "2025-10-22",
+      "y": 308.78,
+      "pipeline": 44.66,
+      "static": 222.28,
+      "scheduled": 229.93,
+      "persistence": 22.0
+    },
+    {
+      "date": "2025-10-23",
+      "y": 240.3,
+      "pipeline": 111.97,
+      "static": 159.48,
+      "scheduled": 165.11,
+      "persistence": 68.48
+    },
+    {
+      "date": "2025-10-24",
+      "y": 224.96,
+      "pipeline": 34.27,
+      "static": 134.27,
+      "scheduled": 139.67,
+      "persistence": 34.27
+    },
+    {
+      "date": "2025-10-25",
+      "y": 324.41,
+      "pipeline": 99.45,
+      "static": 206.82,
+      "scheduled": 215.61,
+      "persistence": 99.45
+    },
+    {
+      "date": "2025-10-26",
+      "y": 330.0,
+      "pipeline": 15.65,
+      "static": 202.64,
+      "scheduled": 215.79,
+      "persistence": 15.65
+    },
+    {
+      "date": "2025-10-27",
+      "y": 334.69,
+      "pipeline": 9.72,
+      "static": 242.93,
+      "scheduled": 253.43,
+      "persistence": 9.72
+    },
+    {
+      "date": "2025-10-28",
+      "y": 366.63,
+      "pipeline": 31.94,
+      "static": 227.2,
+      "scheduled": 240.54,
+      "persistence": 31.94
+    },
+    {
+      "date": "2025-10-29",
+      "y": 393.08,
+      "pipeline": 26.45,
+      "static": 243.84,
+      "scheduled": 258.67,
+      "persistence": 26.45
+    },
+    {
+      "date": "2025-10-30",
+      "y": 372.52,
+      "pipeline": 21.33,
+      "static": 261.62,
+      "scheduled": 276.9,
+      "persistence": 21.33
+    },
+    {
+      "date": "2025-10-31",
+      "y": 333.55,
+      "pipeline": 38.97,
+      "static": 264.4,
+      "scheduled": 34.39,
+      "persistence": 38.97
+    },
+    {
+      "date": "2025-11-01",
+      "y": 233.49,
+      "pipeline": 100.06,
+      "static": 149.12,
+      "scheduled": 92.88,
+      "persistence": 100.06
+    },
+    {
+      "date": "2025-11-02",
+      "y": 335.73,
+      "pipeline": 105.07,
+      "static": 209.36,
+      "scheduled": 104.88,
+      "persistence": 105.07
+    },
+    {
+      "date": "2025-11-03",
+      "y": 371.3,
+      "pipeline": 36.06,
+      "static": 214.88,
+      "scheduled": 37.08,
+      "persistence": 36.06
+    },
+    {
+      "date": "2025-11-04",
+      "y": 324.63,
+      "pipeline": 46.67,
+      "static": 240.34,
+      "scheduled": 25.66,
+      "persistence": 46.67
+    },
+    {
+      "date": "2025-11-05",
+      "y": 339.43,
+      "pipeline": 21.7,
+      "static": 246.84,
+      "scheduled": 12.86,
+      "persistence": 21.7
+    },
+    {
+      "date": "2025-11-06",
+      "y": 376.97,
+      "pipeline": 37.55,
+      "static": 244.63,
+      "scheduled": 13.79,
+      "persistence": 37.55
+    },
+    {
+      "date": "2025-11-07",
+      "y": 364.69,
+      "pipeline": 22.74,
+      "static": 241.99,
+      "scheduled": 13.25,
+      "persistence": 22.74
+    },
+    {
+      "date": "2025-11-08",
+      "y": 329.34,
+      "pipeline": 35.35,
+      "static": 248.66,
+      "scheduled": 20.07,
+      "persistence": 35.35
+    },
+    {
+      "date": "2025-11-09",
+      "y": 330.09,
+      "pipeline": 6.5,
+      "static": 226.89,
+      "scheduled": 21.34,
+      "persistence": 6.5
+    },
+    {
+      "date": "2025-11-10",
+      "y": 335.88,
+      "pipeline": 17.27,
+      "static": 219.24,
+      "scheduled": 18.22,
+      "persistence": 15.07
+    },
+    {
+      "date": "2025-11-11",
+      "y": 186.72,
+      "pipeline": 132.87,
+      "static": 92.51,
+      "scheduled": 131.75,
+      "persistence": 149.16
+    },
+    {
+      "date": "2025-11-12",
+      "y": 289.48,
+      "pipeline": 125.59,
+      "static": 171.14,
+      "scheduled": 121.47,
+      "persistence": 121.18
+    },
+    {
+      "date": "2025-11-13",
+      "y": 314.65,
+      "pipeline": 42.31,
+      "static": 175.88,
+      "scheduled": 37.22,
+      "persistence": 29.19
+    },
+    {
+      "date": "2025-11-14",
+      "y": 287.38,
+      "pipeline": 20.26,
+      "static": 222.56,
+      "scheduled": 32.0,
+      "persistence": 27.27
+    },
+    {
+      "date": "2025-11-15",
+      "y": 256.63,
+      "pipeline": 33.63,
+      "static": 172.12,
+      "scheduled": 36.49,
+      "persistence": 33.95
+    },
+    {
+      "date": "2025-11-16",
+      "y": 299.15,
+      "pipeline": 34.1,
+      "static": 185.59,
+      "scheduled": 12.47,
+      "persistence": 42.6
+    },
+    {
+      "date": "2025-11-17",
+      "y": 196.98,
+      "pipeline": 77.2,
+      "static": 101.17,
+      "scheduled": 76.24,
+      "persistence": 102.16
+    },
+    {
+      "date": "2025-11-18",
+      "y": 135.75,
+      "pipeline": 29.31,
+      "static": 59.51,
+      "scheduled": 29.75,
+      "persistence": 61.23
+    },
+    {
+      "date": "2025-11-19",
+      "y": 164.68,
+      "pipeline": 12.81,
+      "static": 41.37,
+      "scheduled": 6.96,
+      "persistence": 28.93
+    },
+    {
+      "date": "2025-11-20",
+      "y": 248.97,
+      "pipeline": 29.47,
+      "static": 142.21,
+      "scheduled": 32.69,
+      "persistence": 84.28
+    },
+    {
+      "date": "2025-11-21",
+      "y": 222.43,
+      "pipeline": 51.19,
+      "static": 125.07,
+      "scheduled": 40.17,
+      "persistence": 64.45
+    },
+    {
+      "date": "2025-11-22",
+      "y": 146.57,
+      "pipeline": 61.14,
+      "static": 77.85,
+      "scheduled": 54.61,
+      "persistence": 75.86
+    },
+    {
+      "date": "2025-11-23",
+      "y": 146.42,
+      "pipeline": 66.63,
+      "static": 38.69,
+      "scheduled": 32.63,
+      "persistence": 6.63
+    },
+    {
+      "date": "2025-11-24",
+      "y": 230.77,
+      "pipeline": 42.0,
+      "static": 112.89,
+      "scheduled": 39.74,
+      "persistence": 84.35
+    },
+    {
+      "date": "2025-11-25",
+      "y": 332.82,
+      "pipeline": 46.07,
+      "static": 206.35,
+      "scheduled": 50.04,
+      "persistence": 102.05
+    },
+    {
+      "date": "2025-11-26",
+      "y": 373.25,
+      "pipeline": 27.31,
+      "static": 254.3,
+      "scheduled": 33.66,
+      "persistence": 40.43
+    },
+    {
+      "date": "2025-11-27",
+      "y": 308.54,
+      "pipeline": 34.24,
+      "static": 217.73,
+      "scheduled": 27.94,
+      "persistence": 65.05
+    },
+    {
+      "date": "2025-11-28",
+      "y": 295.16,
+      "pipeline": 18.58,
+      "static": 234.16,
+      "scheduled": 15.76,
+      "persistence": 28.13
+    },
+    {
+      "date": "2025-11-29",
+      "y": 232.64,
+      "pipeline": 46.33,
+      "static": 146.57,
+      "scheduled": 26.52,
+      "persistence": 64.11
+    },
+    {
+      "date": "2025-11-30",
+      "y": 141.03,
+      "pipeline": 113.57,
+      "static": 72.92,
+      "scheduled": 53.19,
+      "persistence": 91.6
+    },
+    {
+      "date": "2025-12-01",
+      "y": 228.87,
+      "pipeline": 60.12,
+      "static": 104.24,
+      "scheduled": 47.18,
+      "persistence": 88.47
+    },
+    {
+      "date": "2025-12-02",
+      "y": 313.17,
+      "pipeline": 26.58,
+      "static": 153.73,
+      "scheduled": 19.35,
+      "persistence": 84.3
+    },
+    {
+      "date": "2025-12-03",
+      "y": 313.42,
+      "pipeline": 13.26,
+      "static": 240.91,
+      "scheduled": 34.3,
+      "persistence": 6.72
+    },
+    {
+      "date": "2025-12-04",
+      "y": 331.51,
+      "pipeline": 19.66,
+      "static": 232.73,
+      "scheduled": 34.15,
+      "persistence": 18.2
+    },
+    {
+      "date": "2025-12-05",
+      "y": 329.09,
+      "pipeline": 16.09,
+      "static": 239.11,
+      "scheduled": 38.89,
+      "persistence": 3.78
+    },
+    {
+      "date": "2025-12-06",
+      "y": 290.39,
+      "pipeline": 14.34,
+      "static": 223.14,
+      "scheduled": 42.17,
+      "persistence": 38.7
+    },
+    {
+      "date": "2025-12-07",
+      "y": 249.82,
+      "pipeline": 40.57,
+      "static": 170.15,
+      "scheduled": 47.7,
+      "persistence": 40.57
+    },
+    {
+      "date": "2025-12-08",
+      "y": 228.26,
+      "pipeline": 29.39,
+      "static": 132.75,
+      "scheduled": 21.99,
+      "persistence": 21.56
+    },
+    {
+      "date": "2025-12-09",
+      "y": 241.58,
+      "pipeline": 13.78,
+      "static": 138.39,
+      "scheduled": 21.3,
+      "persistence": 13.78
+    },
+    {
+      "date": "2025-12-10",
+      "y": 301.16,
+      "pipeline": 59.58,
+      "static": 195.19,
+      "scheduled": 50.73,
+      "persistence": 59.58
+    },
+    {
+      "date": "2025-12-11",
+      "y": 282.88,
+      "pipeline": 23.0,
+      "static": 197.57,
+      "scheduled": 32.81,
+      "persistence": 23.0
+    },
+    {
+      "date": "2025-12-12",
+      "y": 306.88,
+      "pipeline": 20.44,
+      "static": 222.75,
+      "scheduled": 39.62,
+      "persistence": 24.0
+    },
+    {
+      "date": "2025-12-13",
+      "y": 319.49,
+      "pipeline": 16.61,
+      "static": 226.31,
+      "scheduled": 59.76,
+      "persistence": 12.61
+    },
+    {
+      "date": "2025-12-14",
+      "y": 223.75,
+      "pipeline": 93.59,
+      "static": 159.29,
+      "scheduled": 43.31,
+      "persistence": 95.74
+    },
+    {
+      "date": "2025-12-15",
+      "y": 252.45,
+      "pipeline": 68.54,
+      "static": 172.24,
+      "scheduled": 51.94,
+      "persistence": 63.15
+    },
+    {
+      "date": "2025-12-16",
+      "y": 257.0,
+      "pipeline": 26.22,
+      "static": 139.05,
+      "scheduled": 12.59,
+      "persistence": 16.06
+    },
+    {
+      "date": "2025-12-17",
+      "y": 322.15,
+      "pipeline": 17.91,
+      "static": 220.76,
+      "scheduled": 26.61,
+      "persistence": 65.15
+    },
+    {
+      "date": "2025-12-18",
+      "y": 351.03,
+      "pipeline": 16.37,
+      "static": 226.71,
+      "scheduled": 20.31,
+      "persistence": 28.88
+    },
+    {
+      "date": "2025-12-19",
+      "y": 311.56,
+      "pipeline": 13.31,
+      "static": 240.48,
+      "scheduled": 34.82,
+      "persistence": 40.25
+    },
+    {
+      "date": "2025-12-20",
+      "y": 252.36,
+      "pipeline": 18.92,
+      "static": 196.53,
+      "scheduled": 14.31,
+      "persistence": 59.2
+    },
+    {
+      "date": "2025-12-21",
+      "y": 271.34,
+      "pipeline": 33.95,
+      "static": 182.48,
+      "scheduled": 22.96,
+      "persistence": 26.0
+    },
+    {
+      "date": "2025-12-22",
+      "y": 303.68,
+      "pipeline": 24.72,
+      "static": 196.92,
+      "scheduled": 42.37,
+      "persistence": 32.34
+    },
+    {
+      "date": "2025-12-23",
+      "y": 308.24,
+      "pipeline": 17.56,
+      "static": 219.92,
+      "scheduled": 45.86,
+      "persistence": 5.23
+    },
+    {
+      "date": "2025-12-24",
+      "y": 279.97,
+      "pipeline": 33.18,
+      "static": 188.45,
+      "scheduled": 18.38,
+      "persistence": 28.27
+    },
+    {
+      "date": "2025-12-25",
+      "y": 321.8,
+      "pipeline": 12.51,
+      "static": 230.36,
+      "scheduled": 35.54,
+      "persistence": 42.48
+    },
+    {
+      "date": "2025-12-26",
+      "y": 364.5,
+      "pipeline": 19.47,
+      "static": 247.27,
+      "scheduled": 60.26,
+      "persistence": 42.7
+    },
+    {
+      "date": "2025-12-27",
+      "y": 327.08,
+      "pipeline": 15.17,
+      "static": 233.95,
+      "scheduled": 38.95,
+      "persistence": 37.74
+    },
+    {
+      "date": "2025-12-28",
+      "y": 258.17,
+      "pipeline": 76.22,
+      "static": 201.05,
+      "scheduled": 34.48,
+      "persistence": 68.91
+    },
+    {
+      "date": "2025-12-29",
+      "y": 204.87,
+      "pipeline": 51.19,
+      "static": 115.81,
+      "scheduled": 35.56,
+      "persistence": 53.3
+    },
+    {
+      "date": "2025-12-30",
+      "y": 237.04,
+      "pipeline": 42.1,
+      "static": 136.55,
+      "scheduled": 41.68,
+      "persistence": 36.12
+    },
+    {
+      "date": "2025-12-31",
+      "y": 275.4,
+      "pipeline": 28.15,
+      "static": 172.23,
+      "scheduled": 25.84,
+      "persistence": 38.36
+    },
+    {
+      "date": "2026-01-01",
+      "y": 221.22,
+      "pipeline": 63.17,
+      "static": 130.62,
+      "scheduled": 40.82,
+      "persistence": 56.01
+    },
+    {
+      "date": "2026-01-02",
+      "y": 322.39,
+      "pipeline": 62.85,
+      "static": 211.4,
+      "scheduled": 53.01,
+      "persistence": 101.17
+    },
+    {
+      "date": "2026-01-03",
+      "y": 345.45,
+      "pipeline": 32.89,
+      "static": 240.8,
+      "scheduled": 17.55,
+      "persistence": 23.38
+    },
+    {
+      "date": "2026-01-04",
+      "y": 233.15,
+      "pipeline": 110.51,
+      "static": 186.62,
+      "scheduled": 59.5,
+      "persistence": 112.3
+    },
+    {
+      "date": "2026-01-05",
+      "y": 198.19,
+      "pipeline": 35.93,
+      "static": 128.04,
+      "scheduled": 19.68,
+      "persistence": 35.2
+    },
+    {
+      "date": "2026-01-06",
+      "y": 187.7,
+      "pipeline": 18.04,
+      "static": 70.61,
+      "scheduled": 18.52,
+      "persistence": 13.14
+    },
+    {
+      "date": "2026-01-07",
+      "y": 269.21,
+      "pipeline": 29.02,
+      "static": 163.86,
+      "scheduled": 23.77,
+      "persistence": 81.51
+    },
+    {
+      "date": "2026-01-08",
+      "y": 221.44,
+      "pipeline": 36.12,
+      "static": 123.96,
+      "scheduled": 21.17,
+      "persistence": 57.28
+    },
+    {
+      "date": "2026-01-09",
+      "y": 197.8,
+      "pipeline": 18.15,
+      "static": 125.68,
+      "scheduled": 22.26,
+      "persistence": 26.26
+    },
+    {
+      "date": "2026-01-10",
+      "y": 200.99,
+      "pipeline": 21.97,
+      "static": 97.02,
+      "scheduled": 20.15,
+      "persistence": 4.41
+    },
+    {
+      "date": "2026-01-11",
+      "y": 268.8,
+      "pipeline": 28.25,
+      "static": 163.59,
+      "scheduled": 21.08,
+      "persistence": 67.94
+    },
+    {
+      "date": "2026-01-12",
+      "y": 294.23,
+      "pipeline": 16.66,
+      "static": 172.68,
+      "scheduled": 12.99,
+      "persistence": 38.35
+    },
+    {
+      "date": "2026-01-13",
+      "y": 297.17,
+      "pipeline": 21.03,
+      "static": 224.38,
+      "scheduled": 29.9,
+      "persistence": 12.72
+    },
+    {
+      "date": "2026-01-14",
+      "y": 241.4,
+      "pipeline": 45.79,
+      "static": 156.8,
+      "scheduled": 31.07,
+      "persistence": 55.76
+    },
+    {
+      "date": "2026-01-15",
+      "y": 199.0,
+      "pipeline": 29.14,
+      "static": 107.27,
+      "scheduled": 30.86,
+      "persistence": 42.4
+    },
+    {
+      "date": "2026-01-16",
+      "y": 191.3,
+      "pipeline": 16.73,
+      "static": 87.05,
+      "scheduled": 19.42,
+      "persistence": 11.14
+    },
+    {
+      "date": "2026-01-17",
+      "y": 205.79,
+      "pipeline": 20.12,
+      "static": 101.68,
+      "scheduled": 18.5,
+      "persistence": 20.51
+    },
+    {
+      "date": "2026-01-18",
+      "y": 248.04,
+      "pipeline": 26.63,
+      "static": 133.21,
+      "scheduled": 23.5,
+      "persistence": 42.25
+    },
+    {
+      "date": "2026-01-19",
+      "y": 273.35,
+      "pipeline": 18.26,
+      "static": 170.28,
+      "scheduled": 14.48,
+      "persistence": 25.31
+    },
+    {
+      "date": "2026-01-20",
+      "y": 300.38,
+      "pipeline": 22.97,
+      "static": 207.51,
+      "scheduled": 16.12,
+      "persistence": 27.86
+    },
+    {
+      "date": "2026-01-21",
+      "y": 291.97,
+      "pipeline": 20.04,
+      "static": 213.74,
+      "scheduled": 33.97,
+      "persistence": 8.58
+    },
+    {
+      "date": "2026-01-22",
+      "y": 189.53,
+      "pipeline": 71.71,
+      "static": 126.2,
+      "scheduled": 43.27,
+      "persistence": 102.49
+    },
+    {
+      "date": "2026-01-23",
+      "y": 106.53,
+      "pipeline": 51.28,
+      "static": 35.58,
+      "scheduled": 36.94,
+      "persistence": 83.0
+    },
+    {
+      "date": "2026-01-24",
+      "y": 87.44,
+      "pipeline": 24.09,
+      "static": 7.48,
+      "scheduled": 21.22,
+      "persistence": 20.77
+    },
+    {
+      "date": "2026-01-25",
+      "y": 156.62,
+      "pipeline": 25.36,
+      "static": 56.46,
+      "scheduled": 29.79,
+      "persistence": 69.18
+    },
+    {
+      "date": "2026-01-26",
+      "y": 130.8,
+      "pipeline": 45.66,
+      "static": 30.3,
+      "scheduled": 39.1,
+      "persistence": 41.82
+    },
+    {
+      "date": "2026-01-27",
+      "y": 126.18,
+      "pipeline": 11.6,
+      "static": 40.91,
+      "scheduled": 13.24,
+      "persistence": 6.74
+    },
+    {
+      "date": "2026-01-28",
+      "y": 119.35,
+      "pipeline": 7.68,
+      "static": 13.17,
+      "scheduled": 6.76,
+      "persistence": 6.83
+    },
+    {
+      "date": "2026-01-29",
+      "y": 103.61,
+      "pipeline": 22.26,
+      "static": 18.61,
+      "scheduled": 30.94,
+      "persistence": 16.06
+    },
+    {
+      "date": "2026-01-30",
+      "y": 118.16,
+      "pipeline": 11.19,
+      "static": 27.41,
+      "scheduled": 12.14,
+      "persistence": 14.55
+    },
+    {
+      "date": "2026-01-31",
+      "y": 145.3,
+      "pipeline": 27.14,
+      "static": 47.1,
+      "scheduled": 17.92,
+      "persistence": 27.14
+    },
+    {
+      "date": "2026-02-01",
+      "y": 171.54,
+      "pipeline": 26.24,
+      "static": 65.22,
+      "scheduled": 18.06,
+      "persistence": 26.24
+    },
+    {
+      "date": "2026-02-02",
+      "y": 137.12,
+      "pipeline": 47.04,
+      "static": 38.64,
+      "scheduled": 45.5,
+      "persistence": 34.85
+    },
+    {
+      "date": "2026-02-03",
+      "y": 125.7,
+      "pipeline": 20.48,
+      "static": 23.83,
+      "scheduled": 35.82,
+      "persistence": 14.15
+    },
+    {
+      "date": "2026-02-04",
+      "y": 134.32,
+      "pipeline": 25.32,
+      "static": 39.11,
+      "scheduled": 26.32,
+      "persistence": 33.23
+    },
+    {
+      "date": "2026-02-05",
+      "y": 266.86,
+      "pipeline": 95.99,
+      "static": 134.7,
+      "scheduled": 56.42,
+      "persistence": 132.54
+    },
+    {
+      "date": "2026-02-06",
+      "y": 275.47,
+      "pipeline": 33.24,
+      "static": 153.59,
+      "scheduled": 20.17,
+      "persistence": 61.21
+    },
+    {
+      "date": "2026-02-07",
+      "y": 234.25,
+      "pipeline": 12.69,
+      "static": 172.66,
+      "scheduled": 19.83,
+      "persistence": 51.48
+    },
+    {
+      "date": "2026-02-08",
+      "y": 284.72,
+      "pipeline": 19.86,
+      "static": 159.14,
+      "scheduled": 30.03,
+      "persistence": 54.01
+    },
+    {
+      "date": "2026-02-09",
+      "y": 219.39,
+      "pipeline": 44.98,
+      "static": 130.24,
+      "scheduled": 45.99,
+      "persistence": 65.34
+    },
+    {
+      "date": "2026-02-10",
+      "y": 245.01,
+      "pipeline": 36.38,
+      "static": 152.32,
+      "scheduled": 22.5,
+      "persistence": 26.24
+    },
+    {
+      "date": "2026-02-11",
+      "y": 206.57,
+      "pipeline": 35.39,
+      "static": 94.7,
+      "scheduled": 44.98,
+      "persistence": 38.44
+    },
+    {
+      "date": "2026-02-12",
+      "y": 167.33,
+      "pipeline": 30.29,
+      "static": 69.69,
+      "scheduled": 52.03,
+      "persistence": 39.24
+    },
+    {
+      "date": "2026-02-13",
+      "y": 104.09,
+      "pipeline": 46.86,
+      "static": 11.67,
+      "scheduled": 49.34,
+      "persistence": 63.24
+    },
+    {
+      "date": "2026-02-14",
+      "y": 116.43,
+      "pipeline": 13.23,
+      "static": 26.32,
+      "scheduled": 13.49,
+      "persistence": 21.17
+    },
+    {
+      "date": "2026-02-15",
+      "y": 109.9,
+      "pipeline": 46.9,
+      "static": 9.13,
+      "scheduled": 39.13,
+      "persistence": 18.71
+    },
+    {
+      "date": "2026-02-16",
+      "y": 102.43,
+      "pipeline": 18.69,
+      "static": 12.66,
+      "scheduled": 25.72,
+      "persistence": 7.72
+    },
+    {
+      "date": "2026-02-17",
+      "y": 100.2,
+      "pipeline": 7.3,
+      "static": 7.65,
+      "scheduled": 6.73,
+      "persistence": 2.69
+    },
+    {
+      "date": "2026-02-18",
+      "y": 88.29,
+      "pipeline": 11.91,
+      "static": 6.14,
+      "scheduled": 9.07,
+      "persistence": 11.91
+    },
+    {
+      "date": "2026-02-19",
+      "y": 97.66,
+      "pipeline": 10.9,
+      "static": 16.79,
+      "scheduled": 9.16,
+      "persistence": 10.9
+    },
+    {
+      "date": "2026-02-20",
+      "y": 84.2,
+      "pipeline": 14.14,
+      "static": 11.43,
+      "scheduled": 16.96,
+      "persistence": 14.14
+    },
+    {
+      "date": "2026-02-21",
+      "y": 114.4,
+      "pipeline": 27.77,
+      "static": 36.46,
+      "scheduled": 26.62,
+      "persistence": 30.95
+    },
+    {
+      "date": "2026-02-22",
+      "y": 169.41,
+      "pipeline": 32.53,
+      "static": 58.63,
+      "scheduled": 34.75,
+      "persistence": 55.01
+    },
+    {
+      "date": "2026-02-23",
+      "y": 176.02,
+      "pipeline": 14.68,
+      "static": 78.0,
+      "scheduled": 12.46,
+      "persistence": 11.71
+    },
+    {
+      "date": "2026-02-24",
+      "y": 102.28,
+      "pipeline": 53.97,
+      "static": 15.11,
+      "scheduled": 73.72,
+      "persistence": 73.74
+    },
+    {
+      "date": "2026-02-25",
+      "y": 88.16,
+      "pipeline": 7.89,
+      "static": 5.25,
+      "scheduled": 13.76,
+      "persistence": 14.11
+    },
+    {
+      "date": "2026-02-26",
+      "y": 87.8,
+      "pipeline": 4.56,
+      "static": 4.57,
+      "scheduled": 7.9,
+      "persistence": 3.67
+    },
+    {
+      "date": "2026-02-27",
+      "y": 95.25,
+      "pipeline": 5.08,
+      "static": 16.77,
+      "scheduled": 7.4,
+      "persistence": 7.45
+    },
+    {
+      "date": "2026-02-28",
+      "y": 121.69,
+      "pipeline": 11.23,
+      "static": 33.51,
+      "scheduled": 13.3,
+      "persistence": 26.44
+    },
+    {
+      "date": "2026-03-01",
+      "y": 204.45,
+      "pipeline": 65.84,
+      "static": 95.74,
+      "scheduled": 60.45,
+      "persistence": 82.76
+    },
+    {
+      "date": "2026-03-02",
+      "y": 285.37,
+      "pipeline": 74.07,
+      "static": 165.46,
+      "scheduled": 78.69,
+      "persistence": 80.92
+    },
+    {
+      "date": "2026-03-03",
+      "y": 230.6,
+      "pipeline": 12.23,
+      "static": 156.29,
+      "scheduled": 15.72,
+      "persistence": 55.18
+    },
+    {
+      "date": "2026-03-04",
+      "y": 219.56,
+      "pipeline": 11.25,
+      "static": 140.75,
+      "scheduled": 22.42,
+      "persistence": 13.56
+    },
+    {
+      "date": "2026-03-05",
+      "y": 144.38,
+      "pipeline": 44.16,
+      "static": 54.1,
+      "scheduled": 26.03,
+      "persistence": 75.17
+    },
+    {
+      "date": "2026-03-06",
+      "y": 78.92,
+      "pipeline": 31.02,
+      "static": 14.17,
+      "scheduled": 24.19,
+      "persistence": 65.47
+    },
+    {
+      "date": "2026-03-07",
+      "y": 91.3,
+      "pipeline": 11.95,
+      "static": 12.72,
+      "scheduled": 11.25,
+      "persistence": 14.46
+    },
+    {
+      "date": "2026-03-08",
+      "y": 85.47,
+      "pipeline": 16.02,
+      "static": 10.35,
+      "scheduled": 17.02,
+      "persistence": 8.97
+    },
+    {
+      "date": "2026-03-09",
+      "y": 98.8,
+      "pipeline": 17.83,
+      "static": 19.4,
+      "scheduled": 18.02,
+      "persistence": 16.13
+    },
+    {
+      "date": "2026-03-10",
+      "y": 121.35,
+      "pipeline": 23.19,
+      "static": 24.88,
+      "scheduled": 26.23,
+      "persistence": 22.72
+    },
+    {
+      "date": "2026-03-11",
+      "y": 107.32,
+      "pipeline": 4.09,
+      "static": 13.91,
+      "scheduled": 5.39,
+      "persistence": 14.03
+    },
+    {
+      "date": "2026-03-12",
+      "y": 103.31,
+      "pipeline": 5.89,
+      "static": 13.82,
+      "scheduled": 8.7,
+      "persistence": 5.93
+    },
+    {
+      "date": "2026-03-13",
+      "y": 107.44,
+      "pipeline": 7.12,
+      "static": 14.26,
+      "scheduled": 10.74,
+      "persistence": 7.29
+    },
+    {
+      "date": "2026-03-14",
+      "y": 97.0,
+      "pipeline": 7.67,
+      "static": 16.51,
+      "scheduled": 8.79,
+      "persistence": 10.44
+    },
+    {
+      "date": "2026-03-15",
+      "y": 98.96,
+      "pipeline": 10.01,
+      "static": 12.75,
+      "scheduled": 11.36,
+      "persistence": 10.18
+    },
+    {
+      "date": "2026-03-16",
+      "y": 146.64,
+      "pipeline": 9.18,
+      "static": 42.35,
+      "scheduled": 8.38,
+      "persistence": 47.67
+    },
+    {
+      "date": "2026-03-17",
+      "y": 203.13,
+      "pipeline": 35.12,
+      "static": 63.04,
+      "scheduled": 41.35,
+      "persistence": 61.16
+    },
+    {
+      "date": "2026-03-18",
+      "y": 136.68,
+      "pipeline": 25.49,
+      "static": 51.48,
+      "scheduled": 16.91,
+      "persistence": 66.45
+    },
+    {
+      "date": "2026-03-19",
+      "y": 120.86,
+      "pipeline": 6.73,
+      "static": 22.9,
+      "scheduled": 11.61,
+      "persistence": 15.82
+    },
+    {
+      "date": "2026-03-20",
+      "y": 87.83,
+      "pipeline": 5.51,
+      "static": 3.37,
+      "scheduled": 7.31,
+      "persistence": 33.03
+    },
+    {
+      "date": "2026-03-21",
+      "y": 70.87,
+      "pipeline": 10.83,
+      "static": 4.89,
+      "scheduled": 11.6,
+      "persistence": 16.96
+    },
+    {
+      "date": "2026-03-22",
+      "y": 69.82,
+      "pipeline": 12.82,
+      "static": 6.78,
+      "scheduled": 10.29,
+      "persistence": 1.47
+    },
+    {
+      "date": "2026-03-23",
+      "y": 70.44,
+      "pipeline": 3.39,
+      "static": 3.88,
+      "scheduled": 3.25,
+      "persistence": 1.68
+    },
+    {
+      "date": "2026-03-24",
+      "y": 73.89,
+      "pipeline": 7.97,
+      "static": 2.39,
+      "scheduled": 8.37,
+      "persistence": 3.45
+    },
+    {
+      "date": "2026-03-25",
+      "y": 83.34,
+      "pipeline": 3.56,
+      "static": 7.76,
+      "scheduled": 3.3,
+      "persistence": 9.45
+    },
+    {
+      "date": "2026-03-26",
+      "y": 86.4,
+      "pipeline": 3.07,
+      "static": 3.1,
+      "scheduled": 6.82,
+      "persistence": 3.07
+    },
+    {
+      "date": "2026-03-27",
+      "y": 76.5,
+      "pipeline": 10.49,
+      "static": 3.72,
+      "scheduled": 6.61,
+      "persistence": 10.49
+    },
+    {
+      "date": "2026-03-28",
+      "y": 86.61,
+      "pipeline": 17.3,
+      "static": 15.38,
+      "scheduled": 11.55,
+      "persistence": 17.3
+    },
+    {
+      "date": "2026-03-29",
+      "y": 111.48,
+      "pipeline": 6.62,
+      "static": 9.88,
+      "scheduled": 6.2,
+      "persistence": 24.88
+    },
+    {
+      "date": "2026-03-30",
+      "y": 149.33,
+      "pipeline": 22.33,
+      "static": 29.85,
+      "scheduled": 14.14,
+      "persistence": 37.85
+    },
+    {
+      "date": "2026-03-31",
+      "y": 129.99,
+      "pipeline": 7.69,
+      "static": 30.59,
+      "scheduled": 7.63,
+      "persistence": 22.98
+    },
+    {
+      "date": "2026-04-01",
+      "y": 103.48,
+      "pipeline": 3.87,
+      "static": 24.66,
+      "scheduled": 6.76,
+      "persistence": 26.51
+    },
+    {
+      "date": "2026-04-02",
+      "y": 102.78,
+      "pipeline": 3.26,
+      "static": 12.1,
+      "scheduled": 3.48,
+      "persistence": 3.91
+    },
+    {
+      "date": "2026-04-03",
+      "y": 79.88,
+      "pipeline": 9.68,
+      "static": 3.97,
+      "scheduled": 6.85,
+      "persistence": 22.9
+    },
+    {
+      "date": "2026-04-04",
+      "y": 80.33,
+      "pipeline": 5.03,
+      "static": 4.22,
+      "scheduled": 4.28,
+      "persistence": 6.45
+    },
+    {
+      "date": "2026-04-05",
+      "y": 77.48,
+      "pipeline": 10.03,
+      "static": 8.9,
+      "scheduled": 8.8,
+      "persistence": 4.75
+    },
+    {
+      "date": "2026-04-06",
+      "y": 95.76,
+      "pipeline": 15.26,
+      "static": 14.0,
+      "scheduled": 12.53,
+      "persistence": 18.28
+    },
+    {
+      "date": "2026-04-07",
+      "y": 102.2,
+      "pipeline": 9.53,
+      "static": 6.82,
+      "scheduled": 5.86,
+      "persistence": 12.59
+    },
+    {
+      "date": "2026-04-08",
+      "y": 83.48,
+      "pipeline": 7.32,
+      "static": 4.72,
+      "scheduled": 9.0,
+      "persistence": 18.72
+    },
+    {
+      "date": "2026-04-09",
+      "y": 78.16,
+      "pipeline": 5.19,
+      "static": 4.25,
+      "scheduled": 4.55,
+      "persistence": 6.83
+    },
+    {
+      "date": "2026-04-10",
+      "y": 103.35,
+      "pipeline": 17.44,
+      "static": 22.43,
+      "scheduled": 14.8,
+      "persistence": 25.19
+    },
+    {
+      "date": "2026-04-11",
+      "y": 112.34,
+      "pipeline": 8.2,
+      "static": 7.52,
+      "scheduled": 11.19,
+      "persistence": 9.57
+    },
+    {
+      "date": "2026-04-12",
+      "y": 104.2,
+      "pipeline": 6.49,
+      "static": 16.39,
+      "scheduled": 7.11,
+      "persistence": 9.28
+    },
+    {
+      "date": "2026-04-13",
+      "y": 122.79,
+      "pipeline": 7.84,
+      "static": 16.01,
+      "scheduled": 8.15,
+      "persistence": 18.59
+    },
+    {
+      "date": "2026-04-14",
+      "y": 123.38,
+      "pipeline": 6.41,
+      "static": 12.34,
+      "scheduled": 7.67,
+      "persistence": 5.96
+    },
+    {
+      "date": "2026-04-15",
+      "y": 102.1,
+      "pipeline": 4.24,
+      "static": 15.97,
+      "scheduled": 4.35,
+      "persistence": 21.27
+    },
+    {
+      "date": "2026-04-16",
+      "y": 90.09,
+      "pipeline": 6.45,
+      "static": 9.23,
+      "scheduled": 6.82,
+      "persistence": 12.03
+    },
+    {
+      "date": "2026-04-17",
+      "y": 71.54,
+      "pipeline": 9.92,
+      "static": 9.42,
+      "scheduled": 10.29,
+      "persistence": 18.55
+    },
+    {
+      "date": "2026-04-18",
+      "y": 46.73,
+      "pipeline": 18.48,
+      "static": 14.16,
+      "scheduled": 14.48,
+      "persistence": 24.81
+    },
+    {
+      "date": "2026-04-19",
+      "y": 50.49,
+      "pipeline": 11.53,
+      "static": 6.58,
+      "scheduled": 9.27,
+      "persistence": 10.93
+    },
+    {
+      "date": "2026-04-20",
+      "y": 69.4,
+      "pipeline": 7.28,
+      "static": 10.29,
+      "scheduled": 9.68,
+      "persistence": 18.92
+    },
+    {
+      "date": "2026-04-21",
+      "y": 76.55,
+      "pipeline": 7.18,
+      "static": 5.82,
+      "scheduled": 5.34,
+      "persistence": 7.83
+    },
+    {
+      "date": "2026-04-22",
+      "y": 70.8,
+      "pipeline": 15.04,
+      "static": 8.06,
+      "scheduled": 13.65,
+      "persistence": 9.68
+    },
+    {
+      "date": "2026-04-23",
+      "y": 77.17,
+      "pipeline": 12.78,
+      "static": 11.77,
+      "scheduled": 12.69,
+      "persistence": 12.03
+    },
+    {
+      "date": "2026-04-24",
+      "y": 72.33,
+      "pipeline": 3.32,
+      "static": 5.29,
+      "scheduled": 4.11,
+      "persistence": 5.75
+    },
+    {
+      "date": "2026-04-25",
+      "y": 84.23,
+      "pipeline": 9.42,
+      "static": 13.54,
+      "scheduled": 10.28,
+      "persistence": 11.9
+    },
+    {
+      "date": "2026-04-26",
+      "y": 80.56,
+      "pipeline": 4.94,
+      "static": 3.5,
+      "scheduled": 4.13,
+      "persistence": 4.36
+    },
+    {
+      "date": "2026-04-27",
+      "y": 77.35,
+      "pipeline": 2.94,
+      "static": 3.68,
+      "scheduled": 3.08,
+      "persistence": 3.21
+    },
+    {
+      "date": "2026-04-28",
+      "y": 114.98,
+      "pipeline": 47.86,
+      "static": 36.43,
+      "scheduled": 44.53,
+      "persistence": 37.63
+    },
+    {
+      "date": "2026-04-29",
+      "y": 107.9,
+      "pipeline": 36.27,
+      "static": 33.13,
+      "scheduled": 34.41,
+      "persistence": 57.37
+    },
+    {
+      "date": "2026-04-30",
+      "y": 68.85,
+      "pipeline": 13.69,
+      "static": 13.97,
+      "scheduled": 12.72,
+      "persistence": 45.91
+    },
+    {
+      "date": "2026-05-01",
+      "y": 80.55,
+      "pipeline": 9.29,
+      "static": 14.14,
+      "scheduled": 9.61,
+      "persistence": 12.26
+    },
+    {
+      "date": "2026-05-02",
+      "y": 71.9,
+      "pipeline": 8.16,
+      "static": 14.17,
+      "scheduled": 6.79,
+      "persistence": 9.82
+    },
+    {
+      "date": "2026-05-03",
+      "y": 79.79,
+      "pipeline": 6.16,
+      "static": 7.45,
+      "scheduled": 4.13,
+      "persistence": 8.59
+    },
+    {
+      "date": "2026-05-04",
+      "y": 85.49,
+      "pipeline": 21.69,
+      "static": 15.34,
+      "scheduled": 19.69,
+      "persistence": 17.96
+    },
+    {
+      "date": "2026-05-05",
+      "y": 88.34,
+      "pipeline": 31.28,
+      "static": 29.14,
+      "scheduled": 26.64,
+      "persistence": 37.38
+    },
+    {
+      "date": "2026-05-06",
+      "y": 73.05,
+      "pipeline": 18.44,
+      "static": 11.13,
+      "scheduled": 17.87,
+      "persistence": 25.86
+    },
+    {
+      "date": "2026-05-07",
+      "y": 82.33,
+      "pipeline": 7.46,
+      "static": 5.36,
+      "scheduled": 4.03,
+      "persistence": 9.28
+    },
+    {
+      "date": "2026-05-08",
+      "y": 77.02,
+      "pipeline": 4.84,
+      "static": 5.1,
+      "scheduled": 4.55,
+      "persistence": 8.74
+    },
+    {
+      "date": "2026-05-09",
+      "y": 63.04,
+      "pipeline": 6.01,
+      "static": 4.1,
+      "scheduled": 4.66,
+      "persistence": 13.98
+    },
+    {
+      "date": "2026-05-10",
+      "y": 63.2,
+      "pipeline": 14.7,
+      "static": 4.72,
+      "scheduled": 15.44,
+      "persistence": 11.83
+    },
+    {
+      "date": "2026-05-11",
+      "y": 105.11,
+      "pipeline": 30.67,
+      "static": 24.98,
+      "scheduled": 25.13,
+      "persistence": 41.91
+    },
+    {
+      "date": "2026-05-12",
+      "y": 131.63,
+      "pipeline": 27.45,
+      "static": 33.98,
+      "scheduled": 23.55,
+      "persistence": 35.11
+    },
+    {
+      "date": "2026-05-13",
+      "y": 104.87,
+      "pipeline": 14.19,
+      "static": 15.7,
+      "scheduled": 15.53,
+      "persistence": 26.77
+    },
+    {
+      "date": "2026-05-14",
+      "y": 109.47,
+      "pipeline": 14.33,
+      "static": 18.54,
+      "scheduled": 14.49,
+      "persistence": 31.21
+    },
+    {
+      "date": "2026-05-15",
+      "y": 153.47,
+      "pipeline": 27.75,
+      "static": 40.96,
+      "scheduled": 27.36,
+      "persistence": 44.0
+    },
+    {
+      "date": "2026-05-16",
+      "y": 177.8,
+      "pipeline": 36.89,
+      "static": 48.41,
+      "scheduled": 32.53,
+      "persistence": 37.33
+    },
+    {
+      "date": "2026-05-17",
+      "y": 98.35,
+      "pipeline": 22.46,
+      "static": 30.58,
+      "scheduled": 19.95,
+      "persistence": 79.45
+    },
+    {
+      "date": "2026-05-18",
+      "y": 59.16,
+      "pipeline": 24.97,
+      "static": 21.35,
+      "scheduled": 22.68,
+      "persistence": 41.98
+    },
+    {
+      "date": "2026-05-19",
+      "y": 66.66,
+      "pipeline": 8.25,
+      "static": 8.28,
+      "scheduled": 6.87,
+      "persistence": 9.08
+    },
+    {
+      "date": "2026-05-20",
+      "y": 101.86,
+      "pipeline": 15.88,
+      "static": 27.9,
+      "scheduled": 17.25,
+      "persistence": 35.2
+    },
+    {
+      "date": "2026-05-21",
+      "y": 106.11,
+      "pipeline": 18.05,
+      "static": 25.41,
+      "scheduled": 17.77,
+      "persistence": 33.56
+    },
+    {
+      "date": "2026-05-22",
+      "y": 79.87,
+      "pipeline": 9.73,
+      "static": 6.05,
+      "scheduled": 7.3,
+      "persistence": 26.85
+    },
+    {
+      "date": "2026-05-23",
+      "y": 79.17,
+      "pipeline": 14.7,
+      "static": 9.65,
+      "scheduled": 15.24,
+      "persistence": 15.09
+    },
+    {
+      "date": "2026-05-24",
+      "y": 97.79,
+      "pipeline": 24.27,
+      "static": 19.74,
+      "scheduled": 20.73,
+      "persistence": 18.62
+    },
+    {
+      "date": "2026-05-25",
+      "y": 103.67,
+      "pipeline": 11.47,
+      "static": 17.79,
+      "scheduled": 7.34,
+      "persistence": 6.85
+    },
+    {
+      "date": "2026-05-26",
+      "y": 107.39,
+      "pipeline": 13.8,
+      "static": 21.29,
+      "scheduled": 16.09,
+      "persistence": 7.33
+    },
+    {
+      "date": "2026-05-27",
+      "y": 112.9,
+      "pipeline": 10.65,
+      "static": 19.44,
+      "scheduled": 11.67,
+      "persistence": 5.65
+    },
+    {
+      "date": "2026-05-28",
+      "y": 119.31,
+      "pipeline": 15.06,
+      "static": 30.79,
+      "scheduled": 21.23,
+      "persistence": 15.06
+    },
+    {
+      "date": "2026-05-29",
+      "y": 97.79,
+      "pipeline": 7.43,
+      "static": 27.19,
+      "scheduled": 11.37,
+      "persistence": 21.52
+    },
+    {
+      "date": "2026-05-30",
+      "y": 103.73,
+      "pipeline": 8.71,
+      "static": 33.68,
+      "scheduled": 5.66,
+      "persistence": 13.87
+    },
+    {
+      "date": "2026-05-31",
+      "y": 87.2,
+      "pipeline": 30.13,
+      "static": 10.96,
+      "scheduled": 21.32,
+      "persistence": 28.43
+    },
+    {
+      "date": "2026-06-01",
+      "y": 127.26,
+      "pipeline": 54.54,
+      "static": 53.81,
+      "scheduled": 57.17,
+      "persistence": 49.25
+    },
+    {
+      "date": "2026-06-02",
+      "y": 119.07,
+      "pipeline": 12.77,
+      "static": 48.94,
+      "scheduled": 17.86,
+      "persistence": 11.71
+    },
+    {
+      "date": "2026-06-03",
+      "y": 114.56,
+      "pipeline": 20.2,
+      "static": 47.76,
+      "scheduled": 25.1,
+      "persistence": 16.91
+    },
+    {
+      "date": "2026-06-04",
+      "y": 125.48,
+      "pipeline": 16.64,
+      "static": 47.79,
+      "scheduled": 17.18,
+      "persistence": 17.65
+    },
+    {
+      "date": "2026-06-05",
+      "y": 117.12,
+      "pipeline": 15.12,
+      "static": 49.82,
+      "scheduled": 16.61,
+      "persistence": 14.45
+    },
+    {
+      "date": "2026-06-06",
+      "y": 108.24,
+      "pipeline": 6.71,
+      "static": 45.62,
+      "scheduled": 9.35,
+      "persistence": 9.62
+    },
+    {
+      "date": "2026-06-07",
+      "y": 111.4,
+      "pipeline": 5.88,
+      "static": 42.17,
+      "scheduled": 9.59,
+      "persistence": 3.7
+    },
+    {
+      "date": "2026-06-08",
+      "y": 106.6,
+      "pipeline": 22.5,
+      "static": 36.78,
+      "scheduled": 36.66,
+      "persistence": 11.19
+    },
+    {
+      "date": "2026-06-09",
+      "y": 114.58,
+      "pipeline": 10.44,
+      "static": 40.19,
+      "scheduled": 8.93,
+      "persistence": 14.05
+    },
+    {
+      "date": "2026-06-10",
+      "y": 111.25,
+      "pipeline": 13.42,
+      "static": 40.15,
+      "scheduled": 9.29,
+      "persistence": 13.42
+    },
+    {
+      "date": "2026-06-11",
+      "y": 118.39,
+      "pipeline": 7.13,
+      "static": 47.94,
+      "scheduled": 2.97,
+      "persistence": 7.13
+    },
+    {
+      "date": "2026-06-12",
+      "y": 132.49,
+      "pipeline": 18.78,
+      "static": 65.68,
+      "scheduled": 21.34,
+      "persistence": 18.77
+    },
+    {
+      "date": "2026-06-13",
+      "y": 129.81,
+      "pipeline": 13.55,
+      "static": 64.39,
+      "scheduled": 18.25,
+      "persistence": 16.17
+    },
+    {
+      "date": "2026-06-14",
+      "y": 141.67,
+      "pipeline": 25.69,
+      "static": 72.6,
+      "scheduled": 25.22,
+      "persistence": 17.96
+    },
+    {
+      "date": "2026-06-15",
+      "y": 133.15,
+      "pipeline": 27.4,
+      "static": 64.12,
+      "scheduled": 21.24,
+      "persistence": 11.28
+    },
+    {
+      "date": "2026-06-16",
+      "y": 141.07,
+      "pipeline": 21.75,
+      "static": 65.58,
+      "scheduled": 17.16,
+      "persistence": 7.93
+    },
+    {
+      "date": "2026-06-17",
+      "y": 98.16,
+      "pipeline": 56.37,
+      "static": 20.13,
+      "scheduled": 42.06,
+      "persistence": 56.37
+    },
+    {
+      "date": "2026-06-18",
+      "y": 126.01,
+      "pipeline": 63.15,
+      "static": 56.68,
+      "scheduled": 54.92,
+      "persistence": 63.15
+    },
+    {
+      "date": "2026-06-19",
+      "y": 101.56,
+      "pipeline": 24.45,
+      "static": 45.25,
+      "scheduled": 18.55,
+      "persistence": 24.45
+    },
+    {
+      "date": "2026-06-20",
+      "y": 97.88,
+      "pipeline": 6.66,
+      "static": 48.38,
+      "scheduled": 16.46,
+      "persistence": 6.66
+    },
+    {
+      "date": "2026-06-21",
+      "y": 95.02,
+      "pipeline": 13.58,
+      "static": 26.14,
+      "scheduled": 11.47,
+      "persistence": 11.83
+    },
+    {
+      "date": "2026-06-22",
+      "y": 105.46,
+      "pipeline": 7.52,
+      "static": 42.5,
+      "scheduled": 10.54,
+      "persistence": 11.89
+    },
+    {
+      "date": "2026-06-23",
+      "y": 123.73,
+      "pipeline": 21.09,
+      "static": 59.63,
+      "scheduled": 14.16,
+      "persistence": 18.43
+    },
+    {
+      "date": "2026-06-24",
+      "y": 115.28,
+      "pipeline": 9.18,
+      "static": 51.69,
+      "scheduled": 15.62,
+      "persistence": 11.32
+    },
+    {
+      "date": "2026-06-25",
+      "y": 115.99,
+      "pipeline": 9.08,
+      "static": 47.13,
+      "scheduled": 8.04,
+      "persistence": 5.45
+    },
+    {
+      "date": "2026-06-26",
+      "y": 106.72,
+      "pipeline": 8.96,
+      "static": 47.16,
+      "scheduled": 13.08,
+      "persistence": 9.68
+    },
+    {
+      "date": "2026-06-27",
+      "y": 104.88,
+      "pipeline": 4.3,
+      "static": 46.16,
+      "scheduled": 4.67,
+      "persistence": 5.15
+    },
+    {
+      "date": "2026-06-28",
+      "y": 105.39,
+      "pipeline": 8.07,
+      "static": 42.92,
+      "scheduled": 8.84,
+      "persistence": 8.45
+    },
+    {
+      "date": "2026-06-29",
+      "y": 89.59,
+      "pipeline": 43.11,
+      "static": 22.2,
+      "scheduled": 44.47,
+      "persistence": 55.09
+    },
+    {
+      "date": "2026-06-30",
+      "y": 63.41,
+      "pipeline": 18.4,
+      "static": 16.68,
+      "scheduled": 16.96,
+      "persistence": 27.68
+    },
+    {
+      "date": "2026-07-01",
+      "y": 87.79,
+      "pipeline": 31.68,
+      "static": 29.3,
+      "scheduled": 30.57,
+      "persistence": 28.25
+    },
+    {
+      "date": "2026-07-02",
+      "y": 98.59,
+      "pipeline": 12.11,
+      "static": 39.47,
+      "scheduled": 11.3,
+      "persistence": 10.84
+    },
+    {
+      "date": "2026-07-03",
+      "y": 74.74,
+      "pipeline": 19.44,
+      "static": 17.59,
+      "scheduled": 21.18,
+      "persistence": 37.73
+    },
+    {
+      "date": "2026-07-04",
+      "y": 62.6,
+      "pipeline": 14.31,
+      "static": 14.41,
+      "scheduled": 13.73,
+      "persistence": 13.62
+    },
+    {
+      "date": "2026-07-05",
+      "y": 86.21,
+      "pipeline": 20.32,
+      "static": 34.72,
+      "scheduled": 22.4,
+      "persistence": 23.62
+    },
+    {
+      "date": "2026-07-06",
+      "y": 122.24,
+      "pipeline": 31.27,
+      "static": 56.19,
+      "scheduled": 25.59,
+      "persistence": 36.03
+    },
+    {
+      "date": "2026-07-07",
+      "y": 84.56,
+      "pipeline": 39.12,
+      "static": 17.48,
+      "scheduled": 34.62,
+      "persistence": 55.33
+    },
+    {
+      "date": "2026-07-08",
+      "y": 87.57,
+      "pipeline": 36.0,
+      "static": 37.71,
+      "scheduled": 33.99,
+      "persistence": 45.92
+    },
+    {
+      "date": "2026-07-09",
+      "y": 96.42,
+      "pipeline": 10.15,
+      "static": 31.11,
+      "scheduled": 11.58,
+      "persistence": 9.22
+    },
+    {
+      "date": "2026-07-10",
+      "y": 95.33,
+      "pipeline": 8.15,
+      "static": 44.23,
+      "scheduled": 9.84,
+      "persistence": 6.57
+    },
+    {
+      "date": "2026-07-11",
+      "y": 71.22,
+      "pipeline": 9.46,
+      "static": 15.97,
+      "scheduled": 12.2,
+      "persistence": 26.53
+    },
+    {
+      "date": "2026-07-12",
+      "y": 63.9,
+      "pipeline": 11.12,
+      "static": 12.16,
+      "scheduled": 9.46,
+      "persistence": 7.97
+    },
+    {
+      "date": "2026-07-13",
+      "y": 96.09,
+      "pipeline": 38.24,
+      "static": 34.21,
+      "scheduled": 36.36,
+      "persistence": 32.33
+    },
+    {
+      "date": "2026-07-14",
+      "y": 95.15,
+      "pipeline": 6.68,
+      "static": 36.92,
+      "scheduled": 6.09,
+      "persistence": 6.83
+    },
+    {
+      "date": "2026-07-15",
+      "y": 71.19,
+      "pipeline": 13.63,
+      "static": 20.07,
+      "scheduled": 11.89,
+      "persistence": 26.29
+    },
+    {
+      "date": "2026-07-16",
+      "y": 64.06,
+      "pipeline": 9.37,
+      "static": 15.81,
+      "scheduled": 8.93,
+      "persistence": 8.05
+    },
+    {
+      "date": "2026-07-17",
+      "y": 95.77,
+      "pipeline": 24.24,
+      "static": 46.26,
+      "scheduled": 26.2,
+      "persistence": 37.86
+    },
+    {
+      "date": "2026-07-18",
+      "y": 60.11,
+      "pipeline": 16.5,
+      "static": 18.37,
+      "scheduled": 13.66,
+      "persistence": 41.02
+    },
+    {
+      "date": "2026-07-19",
+      "y": 61.17,
+      "pipeline": 11.42,
+      "static": 20.29,
+      "scheduled": 9.26,
+      "persistence": 7.15
+    },
+    {
+      "date": "2026-07-20",
+      "y": 55.54,
+      "pipeline": 8.26,
+      "static": 6.14,
+      "scheduled": 7.39,
+      "persistence": 11.88
+    },
+    {
+      "date": "2026-07-21",
+      "y": 57.88,
+      "pipeline": 5.56,
+      "static": 10.61,
+      "scheduled": 5.84,
+      "persistence": 3.41
+    },
+    {
+      "date": "2026-07-22",
+      "y": 58.13,
+      "pipeline": 12.66,
+      "static": 13.17,
+      "scheduled": 12.76,
+      "persistence": 6.8
+    },
+    {
+      "date": "2026-07-23",
+      "y": 93.46,
+      "pipeline": 35.35,
+      "static": 43.55,
+      "scheduled": 36.16,
+      "persistence": 35.75
+    },
+    {
+      "date": "2026-07-24",
+      "y": 85.33,
+      "pipeline": 5.74,
+      "static": 37.09,
+      "scheduled": 5.29,
+      "persistence": 13.28
+    },
+    {
+      "date": "2026-07-25",
+      "y": 54.08,
+      "pipeline": 33.71,
+      "static": 12.26,
+      "scheduled": 30.44,
+      "persistence": 31.25
+    },
+    {
+      "date": "2026-07-26",
+      "y": 52.83,
+      "pipeline": 10.21,
+      "static": 8.06,
+      "scheduled": 9.13,
+      "persistence": 4.05
+    },
+    {
+      "date": "2026-07-27",
+      "y": 92.15,
+      "pipeline": 37.81,
+      "static": 37.63,
+      "scheduled": 37.61,
+      "persistence": 39.55
+    },
+    {
+      "date": "2026-07-28",
+      "y": 98.18,
+      "pipeline": 15.72,
+      "static": 48.63,
+      "scheduled": 6.63,
+      "persistence": 8.17
+    },
+    {
+      "date": "2026-07-29",
+      "y": 92.25,
+      "pipeline": 8.21,
+      "static": 41.05,
+      "scheduled": 7.07,
+      "persistence": 10.03
+    },
+    {
+      "date": "2026-07-30",
+      "y": 89.58,
+      "pipeline": 23.52,
+      "static": 32.11,
+      "scheduled": 10.45,
+      "persistence": 3.22
+    },
+    {
+      "date": "2026-07-31",
+      "y": 55.78,
+      "pipeline": 38.42,
+      "static": 10.34,
+      "scheduled": 27.08,
+      "persistence": 33.79
+    },
+    {
+      "date": "2026-08-01",
+      "y": 57.28,
+      "pipeline": 5.73,
+      "static": 13.38,
+      "scheduled": 8.29,
+      "persistence": 5.72
+    },
+    {
+      "date": "2026-08-02",
+      "y": 57.87,
+      "pipeline": 1.96,
+      "static": 6.87,
+      "scheduled": 4.57,
+      "persistence": 1.96
+    },
+    {
+      "date": "2026-08-03",
+      "y": 53.06,
+      "pipeline": 5.05,
+      "static": 13.75,
+      "scheduled": 10.9,
+      "persistence": 5.05
+    },
+    {
+      "date": "2026-08-04",
+      "y": 56.33,
+      "pipeline": 11.29,
+      "static": 10.66,
+      "scheduled": 5.32,
+      "persistence": 3.89
+    },
+    {
+      "date": "2026-08-05",
+      "y": 55.33,
+      "pipeline": 14.57,
+      "static": 12.27,
+      "scheduled": 8.44,
+      "persistence": 2.27
+    },
+    {
+      "date": "2026-08-06",
+      "y": 57.05,
+      "pipeline": 17.73,
+      "static": 12.42,
+      "scheduled": 13.24,
+      "persistence": 2.79
+    },
+    {
+      "date": "2026-08-07",
+      "y": 59.65,
+      "pipeline": 3.38,
+      "static": 13.77,
+      "scheduled": 8.01,
+      "persistence": 3.38
+    },
+    {
+      "date": "2026-08-08",
+      "y": 58.94,
+      "pipeline": 5.23,
+      "static": 18.62,
+      "scheduled": 6.69,
+      "persistence": 5.22
+    },
+    {
+      "date": "2026-08-09",
+      "y": 61.06,
+      "pipeline": 8.63,
+      "static": 12.39,
+      "scheduled": 8.72,
+      "persistence": 8.63
+    },
+    {
+      "date": "2026-08-10",
+      "y": 58.53,
+      "pipeline": 6.47,
+      "static": 7.93,
+      "scheduled": 8.73,
+      "persistence": 6.47
+    },
+    {
+      "date": "2026-08-11",
+      "y": 60.17,
+      "pipeline": 6.12,
+      "static": 12.81,
+      "scheduled": 6.72,
+      "persistence": 6.48
+    },
+    {
+      "date": "2026-08-12",
+      "y": 108.44,
+      "pipeline": 54.39,
+      "static": 54.69,
+      "scheduled": 46.94,
+      "persistence": 48.27
+    },
+    {
+      "date": "2026-08-13",
+      "y": 110.35,
+      "pipeline": 9.87,
+      "static": 55.69,
+      "scheduled": 7.02,
+      "persistence": 6.76
+    },
+    {
+      "date": "2026-08-14",
+      "y": 104.14,
+      "pipeline": 9.91,
+      "static": 52.86,
+      "scheduled": 7.28,
+      "persistence": 15.77
+    },
+    {
+      "date": "2026-08-15",
+      "y": 66.32,
+      "pipeline": 20.75,
+      "static": 13.32,
+      "scheduled": 7.46,
+      "persistence": 37.82
+    },
+    {
+      "date": "2026-08-16",
+      "y": 64.0,
+      "pipeline": 5.54,
+      "static": 8.96,
+      "scheduled": 9.15,
+      "persistence": 3.03
+    },
+    {
+      "date": "2026-08-17",
+      "y": 98.72,
+      "pipeline": 27.71,
+      "static": 35.8,
+      "scheduled": 12.02,
+      "persistence": 34.71
+    },
+    {
+      "date": "2026-08-18",
+      "y": 73.97,
+      "pipeline": 23.35,
+      "static": 16.72,
+      "scheduled": 23.71,
+      "persistence": 38.51
+    },
+    {
+      "date": "2026-08-19",
+      "y": 58.67,
+      "pipeline": 9.55,
+      "static": 11.1,
+      "scheduled": 13.62,
+      "persistence": 15.29
+    },
+    {
+      "date": "2026-08-20",
+      "y": 57.72,
+      "pipeline": 6.42,
+      "static": 5.1,
+      "scheduled": 6.0,
+      "persistence": 3.0
+    },
+    {
+      "date": "2026-08-21",
+      "y": 89.05,
+      "pipeline": 34.22,
+      "static": 42.67,
+      "scheduled": 21.66,
+      "persistence": 35.38
+    },
+    {
+      "date": "2026-08-22",
+      "y": 57.81,
+      "pipeline": 11.68,
+      "static": 11.0,
+      "scheduled": 6.47,
+      "persistence": 33.07
+    },
+    {
+      "date": "2026-08-23",
+      "y": 49.47,
+      "pipeline": 10.94,
+      "static": 8.05,
+      "scheduled": 9.17,
+      "persistence": 9.39
+    },
+    {
+      "date": "2026-08-24",
+      "y": 53.38,
+      "pipeline": 5.42,
+      "static": 4.02,
+      "scheduled": 9.95,
+      "persistence": 4.63
+    },
+    {
+      "date": "2026-08-25",
+      "y": 49.75,
+      "pipeline": 10.62,
+      "static": 10.75,
+      "scheduled": 14.91,
+      "persistence": 4.12
+    },
+    {
+      "date": "2026-08-26",
+      "y": 51.28,
+      "pipeline": 5.45,
+      "static": 6.05,
+      "scheduled": 4.41,
+      "persistence": 5.34
+    },
+    {
+      "date": "2026-08-27",
+      "y": 53.71,
+      "pipeline": 8.08,
+      "static": 8.37,
+      "scheduled": 2.33,
+      "persistence": 4.18
+    },
+    {
+      "date": "2026-08-28",
+      "y": 50.49,
+      "pipeline": 11.21,
+      "static": 13.6,
+      "scheduled": 12.64,
+      "persistence": 6.4
+    },
+    {
+      "date": "2026-08-29",
+      "y": 74.35,
+      "pipeline": 26.87,
+      "static": 34.6,
+      "scheduled": 23.47,
+      "persistence": 26.87
+    },
+    {
+      "date": "2026-08-30",
+      "y": 71.14,
+      "pipeline": 3.52,
+      "static": 33.38,
+      "scheduled": 12.46,
+      "persistence": 3.52
+    }
+  ],
+  "decisions": {
+    "none": 244,
+    "watch": 102,
+    "retrain": 12,
+    "hold": 7
+  },
+  "safe_mode_hours": 1320,
+  "retraining": {
+    "attempts": 12,
+    "promotions": 6,
+    "rejected": 6,
+    "rollbacks": 1
+  },
+  "versions": [
+    {
+      "version": "v001",
+      "stage": "archived",
+      "registered_at": "2025-08-31 23:00:00",
+      "kind": "ridge",
+      "strategy": "full_history",
+      "trigger": "initial",
+      "promoted_at": "2025-08-31 23:00:00"
+    },
+    {
+      "version": "v002",
+      "stage": "archived",
+      "registered_at": "2025-10-15 23:00:00",
+      "kind": "hgb",
+      "strategy": "recency_weighted",
+      "trigger": "performance+drift",
+      "promoted_at": "2025-10-15 23:00:00"
+    },
+    {
+      "version": "v003",
+      "stage": "archived",
+      "registered_at": "2025-11-09 23:00:00",
+      "kind": "hgb",
+      "strategy": "recency_weighted",
+      "trigger": "performance",
+      "promoted_at": "2025-11-09 23:00:00"
+    },
+    {
+      "version": "v004",
+      "stage": "archived",
+      "registered_at": "2026-02-22 23:00:00",
+      "kind": "hgb",
+      "strategy": "full_history",
+      "trigger": "performance",
+      "promoted_at": "2026-02-22 23:00:00"
+    },
+    {
+      "version": "v005",
+      "stage": "archived",
+      "registered_at": "2026-05-28 23:00:00",
+      "kind": "hgb",
+      "strategy": "recency_weighted",
+      "trigger": "slow_decay",
+      "promoted_at": "2026-05-28 23:00:00"
+    },
+    {
+      "version": "v006",
+      "stage": "champion",
+      "registered_at": "2026-06-17 23:00:00",
+      "kind": "hgb",
+      "strategy": "full_history",
+      "trigger": "performance",
+      "promoted_at": "2026-06-17 23:00:00"
+    },
+    {
+      "version": "v007",
+      "stage": "rolled_back",
+      "registered_at": "2026-08-03 23:00:00",
+      "kind": "hgb",
+      "strategy": "recency_weighted",
+      "trigger": "performance",
+      "promoted_at": "2026-08-03 23:00:00"
+    }
+  ],
+  "registry_history": [
+    {
+      "ts": "2025-08-31 23:00:00",
+      "action": "register",
+      "version": "v001"
+    },
+    {
+      "ts": "2025-08-31 23:00:00",
+      "action": "promote",
+      "version": "v001",
+      "replaced": null,
+      "reason": "initial model"
+    },
+    {
+      "ts": "2025-10-15 23:00:00",
+      "action": "register",
+      "version": "v002"
+    },
+    {
+      "ts": "2025-10-15 23:00:00",
+      "action": "promote",
+      "version": "v002",
+      "replaced": "v001",
+      "reason": "hgb/recency_weighted cut holdout MAE by 26.2% (60.4 -> 44.6, P better = 0.95)"
+    },
+    {
+      "ts": "2025-10-22 23:00:00",
+      "action": "retire_shadow",
+      "version": "v001",
+      "reason": "probation passed: live MAE 35.9 vs 142.3"
+    },
+    {
+      "ts": "2025-11-09 23:00:00",
+      "action": "register",
+      "version": "v003"
+    },
+    {
+      "ts": "2025-11-09 23:00:00",
+      "action": "promote",
+      "version": "v003",
+      "replaced": "v002",
+      "reason": "hgb/recency_weighted/tuned-3 cut holdout MAE by 76.4% (57.5 -> 13.6, P better = 1.00)"
+    },
+    {
+      "ts": "2025-11-16 23:00:00",
+      "action": "retire_shadow",
+      "version": "v002",
+      "reason": "probation passed: live MAE 62.0 vs 77.3"
+    },
+    {
+      "ts": "2026-02-22 23:00:00",
+      "action": "register",
+      "version": "v004"
+    },
+    {
+      "ts": "2026-02-22 23:00:00",
+      "action": "promote",
+      "version": "v004",
+      "replaced": "v003",
+      "reason": "hgb/full_history/tuned-3 cut holdout MAE by 23.5% (15.4 -> 11.8, P better = 0.99)"
+    },
+    {
+      "ts": "2026-03-01 23:00:00",
+      "action": "retire_shadow",
+      "version": "v003",
+      "reason": "probation passed: live MAE 16.2 vs 17.9"
+    },
+    {
+      "ts": "2026-05-28 23:00:00",
+      "action": "register",
+      "version": "v005"
+    },
+    {
+      "ts": "2026-05-28 23:00:00",
+      "action": "promote",
+      "version": "v005",
+      "replaced": "v004",
+      "reason": "hgb/recency_weighted cut holdout MAE by 19.5% (14.1 -> 11.3, P better = 1.00)"
+    },
+    {
+      "ts": "2026-06-04 23:00:00",
+      "action": "retire_shadow",
+      "version": "v004",
+      "reason": "probation passed: live MAE 22.3 vs 22.1"
+    },
+    {
+      "ts": "2026-06-17 23:00:00",
+      "action": "register",
+      "version": "v006"
+    },
+    {
+      "ts": "2026-06-17 23:00:00",
+      "action": "promote",
+      "version": "v006",
+      "replaced": "v005",
+      "reason": "hgb/full_history cut holdout MAE by 30.3% (21.9 -> 15.3, P better = 1.00)"
+    },
+    {
+      "ts": "2026-06-24 23:00:00",
+      "action": "retire_shadow",
+      "version": "v005",
+      "reason": "probation passed: live MAE 18.4 vs 20.4"
+    },
+    {
+      "ts": "2026-08-03 23:00:00",
+      "action": "register",
+      "version": "v007"
+    },
+    {
+      "ts": "2026-08-03 23:00:00",
+      "action": "promote",
+      "version": "v007",
+      "replaced": "v006",
+      "reason": "hgb/recency_weighted/tuned-2 cut holdout MAE by 53.7% (19.7 -> 9.1, P better = 1.00)"
+    },
+    {
+      "ts": "2026-08-10 23:00:00",
+      "action": "rollback",
+      "version": "v006",
+      "replaced": "v007",
+      "reason": "live MAE 11.3 vs 9.3 for the previous model"
+    }
+  ],
+  "runtime_seconds": 163.8,
+  "cycles": 365
+}

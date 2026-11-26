@@ -1,0 +1,81 @@
+# AQI pipeline configuration.
+# Every key is optional; the values below are the built-in defaults
+# (see src/aqi_pipeline/config.py). Unknown keys are rejected at load time.
+
+location: SIM-01 (synthetic)
+run_dir: runs/default            # database, model registry and reports live here
+
+data:
+  horizon_hours: 24              # forecast lead time
+  stuck_hours: 6                 # identical consecutive readings that mean "stuck sensor"
+  warn_bad_fraction: 0.05        # batch status thresholds
+  fail_bad_fraction: 0.25
+  min_label_hours: 16            # valid PM hours needed in a 24-hour AQI window
+
+model:
+  candidates: [ridge, hgb]       # ridge = linear baseline, hgb = gradient-boosted trees
+  target_mode: logratio          # predict log(AQI in 24 h / AQI now)
+  use_day_of_year: false
+  cv_folds: 3
+  cv_test_days: 30
+  train_stride_hours: 2
+  hgb_params: {learning_rate: 0.06, max_iter: 200, max_leaf_nodes: 31, min_samples_leaf: 40, l2_regularization: 1.0}
+  ridge_params: {alpha: 10.0}
+
+monitor:
+  # input drift
+  drift_window_days: 14
+  season_half_width_days: 30
+  psi_floor: 0.25
+  calibration_quantile: 0.95
+  calibration_margin: 1.25
+  drift_warn_score: 0.15
+  drift_alert_score: 0.35
+  novelty_window_days: 3
+  novelty_share: 0.25
+  # accuracy
+  perf_window_days: 7
+  perf_warn_ratio: 1.25
+  perf_critical_ratio: 1.5
+  perf_min_gap: 3.0
+  min_coverage: 0.5
+  cusum_slack: 0.30
+  cusum_alarm: 4.0
+  # safe mode
+  safe_window_days: 3
+  safe_enter_ratio: 1.25
+  safe_exit_ratio: 1.0
+
+retrain:
+  strategies: [full_history, recent_window, recency_weighted]
+  recent_window_days: 150
+  half_life_days: 45
+  eval_days: 10
+  urgent_eval_days: 5
+  min_improvement: 0.05
+  confidence: 0.95
+  cooldown_days: 5
+  max_backoff: 4
+  max_age_days: 60
+  perf_persist_cycles: 2
+  drift_persist_cycles: 5
+  quality_window_days: 3
+  quality_hold_fraction: 0.15
+  probation_days: 7
+  rollback_tolerance: 0.05
+  tune_on_failure: true
+  tune_iterations: 4
+
+# Used by `aqi-pipeline simulate`. Events are optional; see src/aqi_pipeline/synthetic.py.
+simulation:
+  seed: 7
+  history_start: "2025-03-01"
+  production_start: "2025-09-01"
+  production_end: "2026-09-01"
+  cycle_hours: 24
+  baseline_interval_days: 30
+  events:
+    - {type: sensor_stuck, column: pm25, start: "2025-09-18", end: "2025-09-23", label: PM2.5 sensor stuck}
+    - {type: sensor_dropout, columns: [pm10, no2], start: "2025-09-19", end: "2025-09-22", rate: 0.7, label: PM10 and NO2 dropouts}
+    - {type: sensor_bias, column: pm10, start: "2026-03-10", factor: 1.3, label: PM10 analyser recalibrated (+30%)}
+    - {type: emission_regime, start: "2026-05-20", ramp_days: 15, params: {ozone_scale: 2.8}, label: Ozone regime (precursor emissions up)}
