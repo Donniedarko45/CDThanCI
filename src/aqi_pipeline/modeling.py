@@ -1,4 +1,5 @@
 """Forecast models, metrics, time-ordered backtesting and model selection."""
+
 from __future__ import annotations
 
 import time
@@ -20,20 +21,24 @@ from .features import Dataset
 
 def make_estimator(kind: str, params: dict[str, Any], random_state: int = 0):
     if kind == "ridge":
-        return make_pipeline(SimpleImputer(strategy="median", keep_empty_features=True),
-                             StandardScaler(), Ridge(**params))
+        return make_pipeline(
+            SimpleImputer(strategy="median", keep_empty_features=True), StandardScaler(), Ridge(**params)
+        )
     if kind == "hgb":
         return HistGradientBoostingRegressor(early_stopping=False, random_state=random_state, **params)
     if kind == "rf":
         defaults = {"n_estimators": 150, "min_samples_leaf": 20, "max_features": 0.4, "n_jobs": -1}
-        return make_pipeline(SimpleImputer(strategy="median", keep_empty_features=True),
-                             RandomForestRegressor(random_state=random_state, **{**defaults, **params}))
+        return make_pipeline(
+            SimpleImputer(strategy="median", keep_empty_features=True),
+            RandomForestRegressor(random_state=random_state, **{**defaults, **params}),
+        )
     raise ValueError(f"unknown model kind: {kind}")
 
 
 @dataclass
 class ForecastModel:
     """A fitted estimator plus what is needed to turn its output into an AQI."""
+
     kind: str
     params: dict[str, Any]
     target_mode: str = "logratio"
@@ -41,8 +46,14 @@ class ForecastModel:
     feature_names: list[str] = field(default_factory=list)
     estimator: Any = None
 
-    def fit(self, X: pd.DataFrame, y: pd.Series, aqi_now: pd.Series,
-            sample_weight: np.ndarray | None = None, random_state: int = 0) -> "ForecastModel":
+    def fit(
+        self,
+        X: pd.DataFrame,
+        y: pd.Series,
+        aqi_now: pd.Series,
+        sample_weight: np.ndarray | None = None,
+        random_state: int = 0,
+    ) -> "ForecastModel":
         if X.empty:
             raise ValueError("cannot fit model on empty dataset")
         self.feature_names = list(X.columns)
@@ -101,11 +112,11 @@ def score(y_true, y_pred, y_naive) -> dict[str, float]:
     return {
         "n": n,
         "mae": mae,
-        "rmse": float(np.sqrt((err ** 2).mean())),
+        "rmse": float(np.sqrt((err**2).mean())),
         "bias": float(err.mean()),
-        "r2": float(1 - (err ** 2).sum() / ss_tot) if ss_tot > 0 else float("nan"),
+        "r2": float(1 - (err**2).sum() / ss_tot) if ss_tot > 0 else float("nan"),
         "mae_naive": mae_naive,
-        "rel_mae": mae / mae_naive if mae_naive > 0 else float("nan"),   # < 1 beats persistence
+        "rel_mae": mae / mae_naive if mae_naive > 0 else float("nan"),  # < 1 beats persistence
         "category_accuracy": float((cat_t == cat_p).mean()),
         "category_within_one": float((np.abs(cat_t - cat_p) <= 1).mean()),
     }
@@ -122,11 +133,18 @@ def training_rows(ds: Dataset, stride: int = 1, start=None, end=None) -> pd.Inde
     return idx[::stride] if stride > 1 else idx
 
 
-def fit_model(ds: Dataset, rows: pd.Index, kind: str, params: dict[str, Any], cfg: ModelConfig,
-              sample_weight: np.ndarray | None = None) -> ForecastModel:
+def fit_model(
+    ds: Dataset,
+    rows: pd.Index,
+    kind: str,
+    params: dict[str, Any],
+    cfg: ModelConfig,
+    sample_weight: np.ndarray | None = None,
+) -> ForecastModel:
     model = ForecastModel(kind=kind, params=dict(params), target_mode=cfg.target_mode)
-    return model.fit(ds.X.loc[rows], ds.y.loc[rows], ds.aqi_now.loc[rows],
-                     sample_weight=sample_weight, random_state=cfg.random_state)
+    return model.fit(
+        ds.X.loc[rows], ds.y.loc[rows], ds.aqi_now.loc[rows], sample_weight=sample_weight, random_state=cfg.random_state
+    )
 
 
 def evaluate(model: ForecastModel, ds: Dataset, rows: pd.Index) -> tuple[dict[str, float], pd.Series]:
@@ -134,8 +152,7 @@ def evaluate(model: ForecastModel, ds: Dataset, rows: pd.Index) -> tuple[dict[st
     return score(ds.y.loc[rows], pred, ds.aqi_now.loc[rows]), pred
 
 
-def backtest(ds: Dataset, kind: str, params: dict[str, Any], cfg: ModelConfig,
-             horizon: int = 24) -> dict[str, Any]:
+def backtest(ds: Dataset, kind: str, params: dict[str, Any], cfg: ModelConfig, horizon: int = 24) -> dict[str, Any]:
     """Expanding-window backtest over the most recent ``cv_folds`` test blocks.
 
     Each fold trains on rows whose label was already known when the test block
@@ -194,8 +211,9 @@ def select_and_train(ds: Dataset, cfg: ModelConfig, horizon: int = 24) -> tuple[
     return model, info
 
 
-def group_importance(model: ForecastModel, ds: Dataset, rows: pd.Index, max_rows: int = 3000,
-                     seed: int = 0) -> dict[str, float]:
+def group_importance(
+    model: ForecastModel, ds: Dataset, rows: pd.Index, max_rows: int = 3000, seed: int = 0
+) -> dict[str, float]:
     """Permutation importance per raw input.
 
     All features derived from one raw input are shuffled together, and the rise

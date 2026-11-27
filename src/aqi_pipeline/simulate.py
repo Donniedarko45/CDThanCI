@@ -15,6 +15,7 @@ is also forecast by two baselines:
 All three are scored on the same hours: forecasts made from clean inputs with
 clean labels.
 """
+
 from __future__ import annotations
 
 import json
@@ -42,14 +43,35 @@ DEFAULT_SIMULATION = {
     "cycle_hours": 24,
     "baseline_interval_days": 30,
     "events": [
-        {"type": "sensor_stuck", "column": "pm25", "start": "2025-09-18", "end": "2025-09-23",
-         "label": "PM2.5 sensor stuck"},
-        {"type": "sensor_dropout", "columns": ["pm10", "no2"], "start": "2025-09-19", "end": "2025-09-22",
-         "rate": 0.7, "label": "PM10 and NO2 dropouts"},
-        {"type": "sensor_bias", "column": "pm10", "start": "2026-03-10", "factor": 1.3,
-         "label": "PM10 analyser recalibrated (+30%)"},
-        {"type": "emission_regime", "start": "2026-05-20", "ramp_days": 15,
-         "params": {"ozone_scale": 2.8}, "label": "Ozone regime (precursor emissions up)"},
+        {
+            "type": "sensor_stuck",
+            "column": "pm25",
+            "start": "2025-09-18",
+            "end": "2025-09-23",
+            "label": "PM2.5 sensor stuck",
+        },
+        {
+            "type": "sensor_dropout",
+            "columns": ["pm10", "no2"],
+            "start": "2025-09-19",
+            "end": "2025-09-22",
+            "rate": 0.7,
+            "label": "PM10 and NO2 dropouts",
+        },
+        {
+            "type": "sensor_bias",
+            "column": "pm10",
+            "start": "2026-03-10",
+            "factor": 1.3,
+            "label": "PM10 analyser recalibrated (+30%)",
+        },
+        {
+            "type": "emission_regime",
+            "start": "2026-05-20",
+            "ramp_days": 15,
+            "params": {"ozone_scale": 2.8},
+            "label": "Ozone regime (precursor emissions up)",
+        },
     ],
 }
 
@@ -72,8 +94,10 @@ def run_simulation(cfg: Config, fresh: bool = True, verbose: bool = True) -> dic
     first = pipe.bootstrap(start - pd.Timedelta(hours=1))
     if verbose:
         meta = pipe.registry.meta(first)
-        print(f"bootstrap: {first} ({meta['kind']}) trained on {meta['n_train_rows']} rows, "
-              f"backtest MAE {meta['validation']['mae']:.1f} ({meta['validation']['rel_mae']:.2f} x persistence)")
+        print(
+            f"bootstrap: {first} ({meta['kind']}) trained on {meta['n_train_rows']} rows, "
+            f"backtest MAE {meta['validation']['mae']:.1f} ({meta['validation']['rel_mae']:.2f} x persistence)"
+        )
 
     step = pd.Timedelta(hours=int(sim["cycle_hours"]))
     now = start + step - pd.Timedelta(hours=1)
@@ -97,8 +121,7 @@ def run_simulation(cfg: Config, fresh: bool = True, verbose: bool = True) -> dic
             mae = f"{m['mae']:6.2f}" if m.get("mae") is not None else "   n/a"
             rmse = f"{m['rmse']:6.2f}" if m.get("rmse") is not None else "   n/a"
             cat_acc = f"{m['category_accuracy']:.1%}" if m.get("category_accuracy") is not None else "n/a"
-            print(f"  {name:10s} MAE {mae}  RMSE {rmse}  category accuracy "
-                  f"{cat_acc}  retrainings {m['retrainings']}")
+            print(f"  {name:10s} MAE {mae}  RMSE {rmse}  category accuracy {cat_acc}  retrainings {m['retrainings']}")
     return summary
 
 
@@ -114,7 +137,8 @@ def _print_cycle(now: pd.Timestamp, record: dict[str, Any]) -> None:
     if "probation" in record:
         p = record["probation"]
         line += f"\n           -> probation: {p['action']} " + (
-            f"(live MAE {p['champion_mae']} vs shadow {p['shadow_mae']})" if "champion_mae" in p else "")
+            f"(live MAE {p['champion_mae']} vs shadow {p['shadow_mae']})" if "champion_mae" in p else ""
+        )
     print(line)
 
 
@@ -154,14 +178,26 @@ def summarise(pipe: Pipeline, sim: dict[str, Any], first_version: str) -> dict[s
     def block(pred: pd.Series, retrainings: int) -> dict[str, Any]:
         m = score(y, pred, naive)
         if m["n"] == 0:
-            return {"mae": None, "rmse": None, "bias": None, "rel_mae": None,
-                    "category_accuracy": None, "category_within_one": None, "n": 0,
-                    "retrainings": retrainings}
-        return {"mae": round(m["mae"], 3), "rmse": round(m["rmse"], 3), "bias": round(m["bias"], 3),
-                "rel_mae": None if np.isnan(m["rel_mae"]) else round(m["rel_mae"], 4),
-                "category_accuracy": round(m["category_accuracy"], 4),
-                "category_within_one": round(m["category_within_one"], 4), "n": m["n"],
-                "retrainings": retrainings}
+            return {
+                "mae": None,
+                "rmse": None,
+                "bias": None,
+                "rel_mae": None,
+                "category_accuracy": None,
+                "category_within_one": None,
+                "n": 0,
+                "retrainings": retrainings,
+            }
+        return {
+            "mae": round(m["mae"], 3),
+            "rmse": round(m["rmse"], 3),
+            "bias": round(m["bias"], 3),
+            "rel_mae": None if np.isnan(m["rel_mae"]) else round(m["rel_mae"], 4),
+            "category_accuracy": round(m["category_accuracy"], 4),
+            "category_within_one": round(m["category_within_one"], 4),
+            "n": m["n"],
+            "retrainings": retrainings,
+        }
 
     comparison = {
         "pipeline": block(pipeline_pred, len(promotions) + len(rejected)),
@@ -171,8 +207,9 @@ def summarise(pipe: Pipeline, sim: dict[str, Any], first_version: str) -> dict[s
     }
     comparison["pipeline"]["promotions"] = len(promotions)
 
-    frame = pd.DataFrame({"y": y, "pipeline": pipeline_pred, "static": static_pred,
-                          "scheduled": scheduled_pred, "persistence": naive})
+    frame = pd.DataFrame(
+        {"y": y, "pipeline": pipeline_pred, "static": static_pred, "scheduled": scheduled_pred, "persistence": naive}
+    )
     monthly = []
     daily_records = []
     if not frame.empty:
@@ -181,20 +218,31 @@ def summarise(pipe: Pipeline, sim: dict[str, Any], first_version: str) -> dict[s
             for name in ("pipeline", "static", "scheduled", "persistence"):
                 row[name] = round(float((g[name] - g["y"]).abs().mean()), 2)
             monthly.append(row)
-        daily_err = pd.DataFrame({
-            "y": frame["y"],
-            **{n: (frame[n] - frame["y"]).abs() for n in ("pipeline", "static", "scheduled", "persistence")},
-        }).resample("D").mean()
-        daily_records = [{"date": str(d.date()), **{k: (None if pd.isna(v) else round(float(v), 2)) for k, v in r.items()}}
-                         for d, r in daily_err.iterrows()]
+        daily_err = (
+            pd.DataFrame(
+                {
+                    "y": frame["y"],
+                    **{n: (frame[n] - frame["y"]).abs() for n in ("pipeline", "static", "scheduled", "persistence")},
+                }
+            )
+            .resample("D")
+            .mean()
+        )
+        daily_records = [
+            {"date": str(d.date()), **{k: (None if pd.isna(v) else round(float(v), 2)) for k, v in r.items()}}
+            for d, r in daily_err.iterrows()
+        ]
 
     cycles = pipe.store.load_cycles()
     decisions = pd.Series([c["decision"]["action"] for c in cycles], dtype=object).value_counts().to_dict()
     safe_hours = int((served.loc[rows, "served"] == "persistence").sum()) if len(rows) else 0
     return {
         "location": cfg.location,
-        "period": {"history_start": sim["history_start"], "production_start": sim["production_start"],
-                   "production_end": sim["production_end"]},
+        "period": {
+            "history_start": sim["history_start"],
+            "production_start": sim["production_start"],
+            "production_end": sim["production_end"],
+        },
         "seed": sim["seed"],
         "injected_events": sim["events"],
         "scored_hours": int(len(rows)),
@@ -203,8 +251,12 @@ def summarise(pipe: Pipeline, sim: dict[str, Any], first_version: str) -> dict[s
         "daily": daily_records,
         "decisions": decisions,
         "safe_mode_hours": safe_hours,
-        "retraining": {"attempts": len(promotions) + len(rejected), "promotions": len(promotions),
-                       "rejected": len(rejected), "rollbacks": len(rollbacks)},
+        "retraining": {
+            "attempts": len(promotions) + len(rejected),
+            "promotions": len(promotions),
+            "rejected": len(rejected),
+            "rollbacks": len(rollbacks),
+        },
         "versions": pipe.registry.versions(),
         "registry_history": pipe.registry.history(),
     }

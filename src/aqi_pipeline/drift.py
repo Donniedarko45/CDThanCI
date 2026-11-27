@@ -20,6 +20,7 @@ the signal meaningful:
 
 The statistic is the Population Stability Index (PSI) on quantile bins.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -45,8 +46,12 @@ def psi(reference, current, bins: int = 10) -> float:
     return float(np.sum((c - r) * np.log(c / r)))
 
 
-def reference_slice(ref: pd.DataFrame, center: pd.Timestamp, cfg: MonitorConfig,
-                    exclude: tuple[pd.Timestamp, pd.Timestamp] | None = None) -> tuple[pd.DataFrame, str]:
+def reference_slice(
+    ref: pd.DataFrame,
+    center: pd.Timestamp,
+    cfg: MonitorConfig,
+    exclude: tuple[pd.Timestamp, pd.Timestamp] | None = None,
+) -> tuple[pd.DataFrame, str]:
     """Reference rows for a window centred on ``center``.
 
     Returns the same-season slice of ``ref`` when it holds at least
@@ -101,16 +106,28 @@ def calibrate_thresholds(ref: pd.DataFrame, columns: list[str], cfg: MonitorConf
     return thresholds
 
 
-def drift_report(ref: pd.DataFrame, current: pd.DataFrame, thresholds: dict[str, float],
-                 importance: dict[str, float], cfg: MonitorConfig) -> dict[str, Any]:
+def drift_report(
+    ref: pd.DataFrame,
+    current: pd.DataFrame,
+    thresholds: dict[str, float],
+    importance: dict[str, float],
+    cfg: MonitorConfig,
+) -> dict[str, Any]:
     """Compare the recent window with its reference.
 
     ``score`` is the importance-weighted share of monitored inputs whose PSI
     exceeds its threshold (0 = nothing drifted, 1 = everything the model relies on).
     """
     if current.empty:
-        return {"level": "ok", "score": 0.0, "reference": "none",
-                "reference_rows": int(len(ref)), "window_rows": 0, "drifted": [], "columns": {}}
+        return {
+            "level": "ok",
+            "score": 0.0,
+            "reference": "none",
+            "reference_rows": int(len(ref)),
+            "window_rows": 0,
+            "drifted": [],
+            "columns": {},
+        }
     center = current.index[0] + (current.index[-1] - current.index[0]) / 2
     reference, mode = reference_slice(ref, center, cfg)
     columns = [c for c in thresholds if c in current.columns and c in reference.columns]
@@ -132,14 +149,27 @@ def drift_report(ref: pd.DataFrame, current: pd.DataFrame, thresholds: dict[str,
         novel = float(((vals < lo) | (vals > hi)).mean()) if len(vals) >= 12 else 0.0
         thresh = max(float(thresholds[col]), 1e-6)
         drifted = value > thresh or novel >= cfg.novelty_share
-        detail[col] = {"psi": round(value, 4), "threshold": thresholds[col],
-                       "ratio": round(value / thresh, 3), "novel": round(novel, 3),
-                       "drifted": bool(drifted), "weight": round(weights[col] / total, 4)}
+        detail[col] = {
+            "psi": round(value, 4),
+            "threshold": thresholds[col],
+            "ratio": round(value / thresh, 3),
+            "novel": round(novel, 3),
+            "drifted": bool(drifted),
+            "weight": round(weights[col] / total, 4),
+        }
         if drifted:
             score += weights[col] / total
-    drifted_cols = sorted((c for c, d in detail.items() if d["drifted"]),
-                          key=lambda c: -max(detail[c]["ratio"], detail[c]["novel"] / nov_share))
+    drifted_cols = sorted(
+        (c for c, d in detail.items() if d["drifted"]),
+        key=lambda c: -max(detail[c]["ratio"], detail[c]["novel"] / nov_share),
+    )
     level = "alert" if score >= cfg.drift_alert_score else "warn" if score >= cfg.drift_warn_score else "ok"
-    return {"level": level, "score": round(score, 4), "reference": mode,
-            "reference_rows": int(len(reference)), "window_rows": int(len(current)),
-            "drifted": drifted_cols, "columns": detail}
+    return {
+        "level": level,
+        "score": round(score, 4),
+        "reference": mode,
+        "reference_rows": int(len(reference)),
+        "window_rows": int(len(current)),
+        "drifted": drifted_cols,
+        "columns": detail,
+    }

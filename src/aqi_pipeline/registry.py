@@ -12,6 +12,7 @@ Stages: ``champion`` serves forecasts; ``shadow`` is the previous champion, kept
 predicting during the new champion's probation so a rollback is one pointer
 swap; ``archived`` and ``rolled_back`` are retired versions kept for audit.
 """
+
 from __future__ import annotations
 
 import json
@@ -50,7 +51,7 @@ def _write_json(path: Path, data: Any) -> None:
             fh.write(payload)
         for attempt in range(10):
             try:
-                os.replace(tmp, path)       # atomic: readers never see a half-written file
+                os.replace(tmp, path)  # atomic: readers never see a half-written file
                 return
             except PermissionError:
                 if attempt == 9:
@@ -108,8 +109,11 @@ class ModelRegistry:
             _write_json(folder / "meta.json", meta)
             index["next_id"] += 1
             index["versions"][version] = {
-                "stage": "candidate", "registered_at": meta["registered_at"],
-                "kind": meta.get("kind"), "strategy": meta.get("strategy"), "trigger": meta.get("trigger"),
+                "stage": "candidate",
+                "registered_at": meta["registered_at"],
+                "kind": meta.get("kind"),
+                "strategy": meta.get("strategy"),
+                "trigger": meta.get("trigger"),
             }
             index["history"].append({"ts": meta["registered_at"], "action": "register", "version": version})
             self._write(index)
@@ -148,8 +152,9 @@ class ModelRegistry:
         ts_str = str(to_utc_naive(ts))
         index["versions"][version]["stage"] = "champion"
         index["versions"][version]["promoted_at"] = ts_str
-        index["history"].append({"ts": ts_str, "action": "promote", "version": version,
-                                 "replaced": previous, "reason": reason})
+        index["history"].append(
+            {"ts": ts_str, "action": "promote", "version": version, "replaced": previous, "reason": reason}
+        )
         self._write(index)
 
     def retire_shadow(self, ts, reason: str) -> str | None:
@@ -158,8 +163,9 @@ class ModelRegistry:
         if shadow:
             index["versions"][shadow]["stage"] = "archived"
             index["shadow"] = None
-            index["history"].append({"ts": str(to_utc_naive(ts)), "action": "retire_shadow",
-                                     "version": shadow, "reason": reason})
+            index["history"].append(
+                {"ts": str(to_utc_naive(ts)), "action": "retire_shadow", "version": shadow, "reason": reason}
+            )
             self._write(index)
         return shadow
 
@@ -172,7 +178,14 @@ class ModelRegistry:
         index["versions"][failed]["stage"] = "rolled_back"
         index["versions"][restored]["stage"] = "champion"
         index["champion"], index["shadow"] = restored, None
-        index["history"].append({"ts": str(to_utc_naive(ts)), "action": "rollback", "version": restored,
-                                 "replaced": failed, "reason": reason})
+        index["history"].append(
+            {
+                "ts": str(to_utc_naive(ts)),
+                "action": "rollback",
+                "version": restored,
+                "replaced": failed,
+                "reason": reason,
+            }
+        )
         self._write(index)
         return restored

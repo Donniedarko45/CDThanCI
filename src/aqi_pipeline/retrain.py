@@ -14,6 +14,7 @@ Data strategies:
 Each strategy is tried with every candidate model family. After a failed
 attempt the next one also runs a small hyper-parameter search.
 """
+
 from __future__ import annotations
 
 import time
@@ -50,13 +51,20 @@ class RetrainOutcome:
     seconds: float = 0.0
 
     def summary(self) -> dict[str, Any]:
-        return {"promoted": self.promoted, "reason": self.reason, "trials": self.trials,
-                "champion_metrics": self.champion_metrics, "gate": self.gate,
-                "best": self.best, "seconds": round(self.seconds, 2)}
+        return {
+            "promoted": self.promoted,
+            "reason": self.reason,
+            "trials": self.trials,
+            "champion_metrics": self.champion_metrics,
+            "gate": self.gate,
+            "best": self.best,
+            "seconds": round(self.seconds, 2),
+        }
 
 
-def strategy_rows(ds: Dataset, strategy: str, cfg: RetrainConfig, mcfg: ModelConfig,
-                  train_end: pd.Timestamp) -> tuple[pd.Index, np.ndarray | None]:
+def strategy_rows(
+    ds: Dataset, strategy: str, cfg: RetrainConfig, mcfg: ModelConfig, train_end: pd.Timestamp
+) -> tuple[pd.Index, np.ndarray | None]:
     """Training rows and sample weights for a data strategy, using labels known by ``train_end``."""
     train_end = to_utc_naive(train_end)
     rows = training_rows(ds, mcfg.train_stride_hours, end=train_end)
@@ -72,8 +80,7 @@ def strategy_rows(ds: Dataset, strategy: str, cfg: RetrainConfig, mcfg: ModelCon
     raise ValueError(f"unknown strategy: {strategy}")
 
 
-def paired_block_bootstrap(err_champion: pd.Series, err_challenger: pd.Series,
-                           samples: int, seed: int) -> float:
+def paired_block_bootstrap(err_champion: pd.Series, err_challenger: pd.Series, samples: int, seed: int) -> float:
     """Probability that the challenger's MAE is lower, resampling whole days.
 
     Hourly errors are strongly autocorrelated; resampling by day keeps that
@@ -93,9 +100,16 @@ def _param_map(mcfg: ModelConfig) -> dict[str, dict[str, Any]]:
     return {"hgb": mcfg.hgb_params, "ridge": mcfg.ridge_params, "rf": {}}
 
 
-def run_retraining(ds: Dataset, now: pd.Timestamp, champion: ForecastModel, mcfg: ModelConfig,
-                   rcfg: RetrainConfig, horizon: int, tune: bool = False,
-                   eval_days: int | None = None) -> RetrainOutcome:
+def run_retraining(
+    ds: Dataset,
+    now: pd.Timestamp,
+    champion: ForecastModel,
+    mcfg: ModelConfig,
+    rcfg: RetrainConfig,
+    horizon: int,
+    tune: bool = False,
+    eval_days: int | None = None,
+) -> RetrainOutcome:
     """Train challengers, compare with the champion on the latest days, apply the gate."""
     t0 = time.time()
     now = to_utc_naive(now)
@@ -106,15 +120,18 @@ def run_retraining(ds: Dataset, now: pd.Timestamp, champion: ForecastModel, mcfg
     # A training row's label must have been known before the holdout begins.
     train_end = eval_start - pd.Timedelta(hours=horizon)
     if len(holdout) < 72:
-        return RetrainOutcome(False, f"only {len(holdout)} clean labelled hours in the last "
-                                     f"{eval_days} days; too few to compare models",
-                              seconds=time.time() - t0)
+        return RetrainOutcome(
+            False,
+            f"only {len(holdout)} clean labelled hours in the last {eval_days} days; too few to compare models",
+            seconds=time.time() - t0,
+        )
 
     y_hold, naive_hold = ds.y.loc[holdout], ds.aqi_now.loc[holdout]
     champ_pred = pd.Series(champion.predict(ds.X.loc[holdout], naive_hold), index=holdout)
     champ_metrics = score(y_hold, champ_pred, naive_hold)
-    champ_summary = {k: (None if isinstance(v, float) and np.isnan(v) else round(v, 4))
-                     for k, v in champ_metrics.items()}
+    champ_summary = {
+        k: (None if isinstance(v, float) and np.isnan(v) else round(v, 4)) for k, v in champ_metrics.items()
+    }
     champ_err = (champ_pred - y_hold).abs()
 
     trials: list[dict[str, Any]] = []
@@ -128,20 +145,31 @@ def run_retraining(ds: Dataset, now: pd.Timestamp, champion: ForecastModel, mcfg
         model = fit_model(ds, rows, kind, params, mcfg, sample_weight=weights)
         metrics, pred = evaluate(model, ds, holdout)
         fitted[len(trials)] = (model, pred)
-        trials.append({"name": label or f"{kind}/{strategy}", "kind": kind, "strategy": strategy,
-                       "params": dict(params), "n_train": int(len(rows)),
-                       "mae": round(metrics["mae"], 3),
-                       "rel_mae": None if np.isnan(metrics["rel_mae"]) else round(metrics["rel_mae"], 4),
-                       "category_accuracy": round(metrics["category_accuracy"], 4),
-                       "seconds": round(time.time() - t, 2)})
+        trials.append(
+            {
+                "name": label or f"{kind}/{strategy}",
+                "kind": kind,
+                "strategy": strategy,
+                "params": dict(params),
+                "n_train": int(len(rows)),
+                "mae": round(metrics["mae"], 3),
+                "rel_mae": None if np.isnan(metrics["rel_mae"]) else round(metrics["rel_mae"], 4),
+                "category_accuracy": round(metrics["category_accuracy"], 4),
+                "seconds": round(time.time() - t, 2),
+            }
+        )
 
     params = _param_map(mcfg)
     for kind in mcfg.candidates:
         for strategy in rcfg.strategies:
             trial(kind, params[kind], strategy)
     if not trials:
-        return RetrainOutcome(False, "not enough training data before the holdout window",
-                              champion_metrics=champ_summary, seconds=time.time() - t0)
+        return RetrainOutcome(
+            False,
+            "not enough training data before the holdout window",
+            champion_metrics=champ_summary,
+            seconds=time.time() - t0,
+        )
 
     if tune and "hgb" in mcfg.candidates:
         hgb_trials = [t for t in trials if t["kind"] == "hgb"]
@@ -152,25 +180,34 @@ def run_retraining(ds: Dataset, now: pd.Timestamp, champion: ForecastModel, mcfg
             trial("hgb", sampled, base_strategy, label=f"hgb/{base_strategy}/tuned-{i + 1}")
 
     best_i = min(range(len(trials)), key=lambda i: trials[i]["mae"])
-    best, (best_model, best_pred) = trials[best_i], fitted[best_i]
+    best, (_, best_pred) = trials[best_i], fitted[best_i]
     best_err = (best_pred - y_hold).abs()
     champ_mae = champ_metrics["mae"]
     improvement = (champ_mae - best["mae"]) / champ_mae if champ_mae > 0 else 0.0
     prob = paired_block_bootstrap(champ_err, best_err, rcfg.bootstrap_samples, mcfg.random_state)
     passed = bool(improvement >= rcfg.min_improvement and not np.isnan(prob) and prob >= rcfg.confidence)
-    gate = {"improvement": round(improvement, 4),
-            "prob_better": None if np.isnan(prob) else round(prob, 3),
-            "min_improvement": rcfg.min_improvement, "confidence": rcfg.confidence, "passed": passed,
-            "holdout_hours": int(len(holdout)), "holdout_start": str(eval_start)}
+    gate = {
+        "improvement": round(improvement, 4),
+        "prob_better": None if np.isnan(prob) else round(prob, 3),
+        "min_improvement": rcfg.min_improvement,
+        "confidence": rcfg.confidence,
+        "passed": passed,
+        "holdout_hours": int(len(holdout)),
+        "holdout_start": str(eval_start),
+    }
 
     if not passed:
-        why = (f"best challenger {best['name']} cut holdout MAE by {improvement:.1%} "
-               f"(P better = {prob:.2f}); needs >= {rcfg.min_improvement:.0%} with P >= {rcfg.confidence:.2f}")
+        why = (
+            f"best challenger {best['name']} cut holdout MAE by {improvement:.1%} "
+            f"(P better = {prob:.2f}); needs >= {rcfg.min_improvement:.0%} with P >= {rcfg.confidence:.2f}"
+        )
         return RetrainOutcome(False, why, trials, champ_summary, gate, best, seconds=time.time() - t0)
 
     # The winner is refitted on everything up to now, so it also learns from the holdout days.
     rows, weights = strategy_rows(ds, best["strategy"], rcfg, mcfg, now + pd.Timedelta(hours=1))
     final = fit_model(ds, rows, best["kind"], best["params"], mcfg, sample_weight=weights)
-    why = (f"{best['name']} cut holdout MAE by {improvement:.1%} "
-           f"({champ_metrics['mae']:.1f} -> {best['mae']:.1f}, P better = {prob:.2f})")
+    why = (
+        f"{best['name']} cut holdout MAE by {improvement:.1%} "
+        f"({champ_metrics['mae']:.1f} -> {best['mae']:.1f}, P better = {prob:.2f})"
+    )
     return RetrainOutcome(True, why, trials, champ_summary, gate, best, final, rows, time.time() - t0)
