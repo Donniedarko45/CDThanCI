@@ -12,6 +12,13 @@
     registry: 'Registry & audit',
     pipeline: 'Architecture & config',
   };
+  const ROUTE_DESCRIPTIONS = {
+    overview: '',
+    diagnostics: 'Is the champion still trustworthy? Error, input drift and accumulated excess error for every daily cycle, and what the policy decided.',
+    simulator: 'Score hypothetical conditions, or a CSV of hourly rows, against the serving champion. Nothing is stored.',
+    registry: 'Every model the pipeline has trained, how each challenger fared at the promotion gate, and the full audit trail.',
+    pipeline: 'How one hourly pass moves through the pipeline, and the configuration it runs with.',
+  };
 
   const PLAYGROUND_FIELDS = [
     { key: 'pm25', label: 'PM2.5', unit: 'µg/m³', min: 0, max: 500, step: 1, def: 65, pLo: 0, pHi: 1000, scale: true, stuck: true },
@@ -264,6 +271,8 @@
         else a.removeAttribute('aria-current');
       });
     const title = ROUTE_TITLES[state.route];
+    document.body.dataset.route = state.route;
+    $('viewDesc').textContent = ROUTE_DESCRIPTIONS[state.route] || '';
     $('pageTitle').textContent = title;
     $('crumbCurrent').textContent = title;
     document.title = title + ' · AQI Pipeline';
@@ -293,6 +302,7 @@
 
   window.addEventListener('hashchange', () => {
     setActiveRoute(routeFromHash());
+    window.scrollTo(0, 0);
     redrawCharts();
   });
   setActiveRoute(routeFromHash());
