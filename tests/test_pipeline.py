@@ -292,3 +292,30 @@ def test_csv_source_bootstrap_and_cycle_through_the_cli(tmp_path, capsys):
     served = pipe.store.load_predictions(role="champion", by="made_at")
     assert len(served) == 72 and served["y_true"].notna().sum() >= 47  # 3 days served, 2 matured
     assert len(pipe.store.load_cycles()) == 3
+
+
+def test_clear_run_dir_keeps_mount_point_with_readonly_parent(tmp_path):
+    """Fresh simulations must not delete the run dir itself (e.g. a Docker volume)."""
+    import os
+    import stat
+
+    from aqi_pipeline.simulate import clear_run_dir
+
+    if hasattr(os, "geteuid") and os.geteuid() == 0:
+        pytest.skip("root ignores directory permissions")
+
+    parent = tmp_path / "root"
+    run_dir = parent / "data"
+    (run_dir / "models" / "v001").mkdir(parents=True)
+    (run_dir / "models" / "v001" / "model.joblib").write_text("x")
+    (run_dir / "summary.json").write_text("{}")
+    (run_dir / "link").symlink_to(run_dir / "summary.json")
+
+    parent.chmod(stat.S_IRUSR | stat.S_IXUSR)  # parent read-only, like "/" above "/data"
+    try:
+        clear_run_dir(run_dir)
+    finally:
+        parent.chmod(stat.S_IRWXU)
+
+    assert run_dir.is_dir()
+    assert list(run_dir.iterdir()) == []
