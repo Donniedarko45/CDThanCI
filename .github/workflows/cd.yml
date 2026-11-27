@@ -44,13 +44,13 @@ jobs:
           test -s /tmp/cd-demo/reports/monitoring_report.html
 
       - name: Upload Python distribution artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cd-python-dist
           path: dist/
 
       - name: Upload demo monitoring report artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cd-demo-report
           path: /tmp/cd-demo/reports/monitoring_report.html

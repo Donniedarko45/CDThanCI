@@ -74,7 +74,7 @@ jobs:
           PY
 
       - name: Upload built distributions
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: python-dist
           path: dist/
@@ -148,7 +148,7 @@ jobs:
 
       - name: Upload coverage and JUnit reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-results-py${{ matrix.python-version }}
           path: |
@@ -280,7 +280,7 @@ jobs:
 
       - name: Upload UI screenshot and monitoring report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: e2e-ui-artifacts
           path: |
