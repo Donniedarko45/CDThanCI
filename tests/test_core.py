@@ -302,6 +302,32 @@ def test_registry_promote_shadow_and_rollback(tmp_path):
         reg.rollback("2026-02-09", "no shadow left")
 
 
+def test_cli_rollback_resets_monitoring_state(tmp_path):
+    from aqi_pipeline.cli import main
+
+    reg = ModelRegistry(tmp_path / "registry")
+    ref = pd.DataFrame({"x": [1.0]}, index=pd.DatetimeIndex(["2026-01-01"]))
+    v1 = reg.register(ForecastModel("ridge", {}), {"kind": "ridge"}, ref, "2026-01-01")
+    reg.promote(v1, "2026-01-01", "initial")
+    reg.promote(reg.register(ForecastModel("hgb", {}), {"kind": "hgb"}, ref, "2026-02-01"), "2026-02-01", "x")
+    store = Store(tmp_path / "pipeline.db")
+    for key, value in (("cusum", {"g": 9.0, "alarm": True}), ("perf_streak", 3), ("safe_mode", True)):
+        store.set_state(key, value)
+    argv = ["--run-dir", str(tmp_path), "rollback", "--now", "2026-02-08"]
+    assert main(argv) == 0
+    assert ModelRegistry(tmp_path / "registry").champion == v1
+    assert (store.get_state("cusum"), store.get_state("perf_streak"), store.get_state("safe_mode")) == (None, 0, False)
+    assert main(argv) == 1  # no shadow left: clean error
+
+
+def test_store_load_events_limit_returns_newest_in_order(tmp_path):
+    store = Store(tmp_path / "p.db")
+    for i in range(5):
+        store.log_event(f"2026-01-0{i + 1}", "k", "info", f"m{i}")
+    assert [e["message"] for e in store.load_events(limit=2)] == ["m3", "m4"]
+    assert len(store.load_events()) == 5
+
+
 def test_store_keeps_raw_values_and_blanks_flagged_cells_on_clean_load(tmp_path, data):
     store = Store(tmp_path / "p.db")
     batch = data.iloc[100:148].copy()
