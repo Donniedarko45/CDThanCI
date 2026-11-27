@@ -123,7 +123,14 @@ def cmd_report(args) -> int:
 def cmd_rollback(args) -> int:
     pipe = _pipeline(args, with_source=False)
     now = _now(args)
-    restored = pipe.registry.rollback(now, args.reason)
+    try:
+        restored = pipe.registry.rollback(now, args.reason)
+    except RuntimeError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    # the failed champion's error history must not count against the restored model
+    for key, value in (("cusum", None), ("perf_streak", 0), ("safe_mode", False)):
+        pipe.store.set_state(key, value)
     pipe.store.log_event(now, "rollback", "warning", f"manual rollback to {restored}: {args.reason}")
     print(f"champion is now {restored}")
     return 0
