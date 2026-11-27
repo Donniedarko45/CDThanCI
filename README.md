@@ -32,7 +32,7 @@ aqi-pipeline --run-dir runs/demo serve        # http://127.0.0.1:8000/ (Operatio
 # Quality, lint, coverage, and package checks:
 ruff check src tests
 ruff format --check src tests
-pytest -q --cov=aqi_pipeline --cov-report=term-missing
+pytest -q --cov=aqi_pipeline --cov-report=term-missing   # 73 tests
 python -m build
 ```
 
@@ -203,11 +203,18 @@ lists them all with comments. Unknown keys are rejected when the file is loaded.
 
 ```
 .github/            GitHub Actions CI/CD workflows and Dependabot config
+docs/               architecture, monitoring, retraining, and CLI/API guides
 src/aqi_pipeline/   the package (pipeline stages, API, static Operations Console, report builder)
 tests/              unit, end-to-end, dashboard, and DevOps config tests
 config/             default settings and two real-data examples
 sample_run/         report and summary from the demo run
 ```
+
+Additional documentation in `docs/`:
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — end-to-end architecture and data flow
+- [`docs/MONITORING.md`](docs/MONITORING.md) — quality gate, seasonal PSI drift, and accuracy tracking
+- [`docs/RETRAINING.md`](docs/RETRAINING.md) — decision policy, challenger gating, probation, and rollback
+- [`docs/CLI_AND_API.md`](docs/CLI_AND_API.md) — CLI commands and HTTP API reference
 
 ## Limits
 
