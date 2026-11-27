@@ -2,9 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AQI Pipeline — Operations Console</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%232a78d6'/%3E%3Cpath d='M8 19l5-6 4 4 7-8' stroke='%23fff' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>AQI Pipeline · Operations Console</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231a1917'/%3E%3Cpath d='M7 20l5-6 4 4 7-8' stroke='%23fff' stroke-width='2.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='23' cy='10' r='2.6' fill='%23338ced'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body class="viz-root">
@@ -12,261 +13,347 @@
 <div class="app-shell">
   <aside class="sidebar" id="sidebar" aria-label="Primary navigation">
     <div class="sidebar-top">
-      <div class="brand-header">
+      <div class="brand">
         <div class="brand-mark">
-          <div class="brand-logo" aria-hidden="true">AQI</div>
+          <div class="brand-logo" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16l5-6 4 4 7-8"/></svg>
+          </div>
           <div>
             <div class="brand-title">AQI Pipeline</div>
             <div class="brand-sub">Operations Console</div>
           </div>
         </div>
-        <button type="button" class="btn sm close-drawer-btn" id="closeDrawerBtn" aria-label="Close navigation">✕</button>
+        <button type="button" class="btn ghost icon close-drawer-btn" id="closeDrawerBtn" aria-label="Close navigation">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
       </div>
 
-      <nav class="nav-list" id="navList">
-        <a href="#/overview" class="nav-item active" data-route="overview">
-          <span class="nav-item-left">
-            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 12h4l3-7 4 14 3-7h4"/></svg>
-            <span>Operations Overview</span>
-          </span>
-          <span class="kbd-hint">1</span>
-        </a>
-        <a href="#/diagnostics" class="nav-item" data-route="diagnostics">
-          <span class="nav-item-left">
-            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 15l3-4 4 2 4-6"/></svg>
-            <span>Drift &amp; Health</span>
-          </span>
-          <span class="kbd-hint">2</span>
-        </a>
-        <a href="#/simulator" class="nav-item" data-route="simulator">
-          <span class="nav-item-left">
-            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 3v4M5 10h14M6 10l-2 9h16l-2-9"/></svg>
-            <span>What-If &amp; Batch</span>
-          </span>
-          <span class="kbd-hint">3</span>
-        </a>
-        <a href="#/registry" class="nav-item" data-route="registry">
-          <span class="nav-item-left">
-            <svg class="nav-icon" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="6" rx="2"/><rect x="4" y="14" width="16" height="6" rx="2"/></svg>
-            <span>Registry &amp; Audit</span>
-          </span>
-          <span class="kbd-hint">4</span>
-        </a>
-        <a href="#/pipeline" class="nav-item" data-route="pipeline">
-          <span class="nav-item-left">
-            <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="6" cy="12" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><path d="M8.7 10.7l6.6-3.4M8.7 13.3l6.6 3.4"/></svg>
-            <span>Architecture &amp; Config</span>
-          </span>
-          <span class="kbd-hint">5</span>
-        </a>
+      <nav id="navList" aria-label="Console views">
+        <div class="nav-group">
+          <div class="nav-label eyebrow">Monitor</div>
+          <a href="#/overview" class="nav-item active" data-route="overview" aria-current="page">
+            <span class="nav-item-left">
+              <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l3-7 4 14 3-7h4"/></svg>
+              <span>Overview</span>
+            </span>
+            <span class="kbd" aria-hidden="true">1</span>
+          </a>
+          <a href="#/diagnostics" class="nav-item" data-route="diagnostics">
+            <span class="nav-item-left">
+              <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16M8 15l3-4 4 2 4-6"/></svg>
+              <span>Drift &amp; health</span>
+            </span>
+            <span class="kbd" aria-hidden="true">2</span>
+          </a>
+        </div>
+        <div class="nav-group">
+          <div class="nav-label eyebrow">Operate</div>
+          <a href="#/simulator" class="nav-item" data-route="simulator">
+            <span class="nav-item-left">
+              <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>
+              <span>What-if &amp; batch</span>
+            </span>
+            <span class="kbd" aria-hidden="true">3</span>
+          </a>
+          <a href="#/registry" class="nav-item" data-route="registry">
+            <span class="nav-item-left">
+              <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="6" rx="2"/><rect x="4" y="14" width="16" height="6" rx="2"/></svg>
+              <span>Registry &amp; audit</span>
+            </span>
+            <span class="kbd" aria-hidden="true">4</span>
+          </a>
+        </div>
+        <div class="nav-group">
+          <div class="nav-label eyebrow">System</div>
+          <a href="#/pipeline" class="nav-item" data-route="pipeline">
+            <span class="nav-item-left">
+              <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.3 10.8l7.4-3.6M8.3 13.2l7.4 3.6"/></svg>
+              <span>Architecture &amp; config</span>
+            </span>
+            <span class="kbd" aria-hidden="true">5</span>
+          </a>
+        </div>
       </nav>
     </div>
 
-    <div class="sidebar-foot">
-      <div class="sidebar-meta">
-        <div><strong id="sideChampion">Champion: –</strong></div>
-        <div class="muted" id="sideHorizon">Horizon: 24h · CPCB Scale</div>
-        <div class="muted" style="margin-top:4px;">Keys: <span class="mono">1-5</span> views · <span class="mono">r</span> refresh · <span class="mono">t</span> theme</div>
+    <div class="side-card">
+      <div class="eyebrow">Serving</div>
+      <div class="side-card-row"><span class="muted">Champion</span><strong id="sideChampion">–</strong></div>
+      <div class="side-card-row"><span class="muted">Horizon</span><strong id="sideHorizon">24h</strong></div>
+      <div class="side-card-row"><span class="muted">Cycles logged</span><strong id="sideCycles">–</strong></div>
+      <div class="side-links">
+        <a href="/report">Report</a>
+        <a href="/docs">API docs</a>
       </div>
-      <div class="sidebar-links">
-        <a class="nav-link" href="/report">Report</a>
-        <a class="nav-link" href="/docs">API Docs</a>
-      </div>
+      <div class="side-keys"><span class="mono">1–5</span> views · <span class="mono">r</span> refresh · <span class="mono">t</span> theme</div>
     </div>
   </aside>
 
   <div class="app-main">
     <header class="topbar">
       <div class="topbar-inner">
-        <div class="status-strip">
-          <button type="button" class="btn sm menu-btn" id="menuBtn" aria-label="Open navigation">☰ Menu</button>
-          <span class="pill info" id="stationLocation">Loading…</span>
-          <span class="pill" id="simBadge" hidden>Synthetic Simulation</span>
-          <span class="pill" id="badgeChampion">Champion: –</span>
-          <span class="pill" id="badgeShadow">Shadow: none</span>
-          <span class="pill" id="badgeSafeMode">Safe Mode: –</span>
-          <span class="pill" id="badgeDecision">Decision: –</span>
-          <span class="muted">Obs: <strong id="lastObsTime">–</strong></span>
-          <span class="muted">Cycle: <strong id="lastCycleTime">–</strong></span>
+        <div class="crumbs">
+          <button type="button" class="btn ghost icon menu-btn" id="menuBtn" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false">
+            <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          </button>
+          <span class="hide-sm">Console</span><span class="sep hide-sm" aria-hidden="true">/</span>
+          <span aria-current="page" id="crumbCurrent">Overview</span>
         </div>
         <div class="toolbar">
-          <button type="button" class="btn sm" id="autoRefreshBtn" aria-pressed="false" title="Poll every 30 seconds">
-            <span class="pulse off" id="autoRefreshDot"></span>
-            <span id="autoRefreshLabel">Auto: Off</span>
+          <button type="button" class="btn ghost" id="autoRefreshBtn" aria-pressed="false" title="Poll every 30 seconds">
+            <span class="live-dot" id="autoRefreshDot"></span>
+            <span id="autoRefreshLabel">Auto-refresh off</span>
           </button>
-          <button type="button" class="btn sm" id="refreshBtn" title="Refresh (r)">Refresh</button>
-          <button type="button" class="btn sm" id="themeToggleBtn" aria-pressed="false" title="Toggle theme (t)">Dark mode</button>
+          <button type="button" class="btn" id="refreshBtn" title="Refresh (r)">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/></svg>
+            <span class="label-text">Refresh</span>
+          </button>
+          <button type="button" class="btn icon" id="themeToggleBtn" aria-pressed="false" aria-label="Switch to dark theme" title="Toggle theme (t)">
+            <svg viewBox="0 0 24 24" aria-hidden="true" id="themeIcon"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+          </button>
         </div>
       </div>
     </header>
 
-    <main class="content">
-      <div class="banner info" id="emptyStateBanner" hidden>
-        <div>
-          <strong>Pipeline not bootstrapped yet.</strong>
-          <span id="emptyStateText">No champion model or cycles exist in this run directory. Run <code class="mono">aqi-pipeline simulate</code> or <code class="mono">bootstrap</code> + <code class="mono">run-cycle</code>, or explore the Simulator tab with synthetic sample data.</span>
+    <main class="content" id="main">
+      <section class="page-head" aria-labelledby="pageTitle">
+        <div class="eyebrow" id="stationLine"><span id="stationLocation">Loading station…</span><span id="simBadge" hidden> · Synthetic simulation</span></div>
+        <div class="page-title-row">
+          <h1 id="pageTitle">Overview</h1>
+          <span class="pill" id="servingPill">Connecting</span>
         </div>
+        <p class="page-summary" id="pageSummary">Loading the latest observations, forecasts and monitoring cycle…</p>
+        <div class="meta-row" aria-label="Pipeline state">
+          <span class="meta-item" id="badgeChampion"><span class="live-dot"></span>Champion <b>–</b></span>
+          <span class="meta-item" id="badgeShadow"><span class="live-dot"></span>Shadow <b>none</b></span>
+          <span class="meta-item" id="badgeSafeMode"><span class="live-dot"></span>Safe mode <b>–</b></span>
+          <span class="meta-item" id="badgeDecision"><span class="live-dot"></span>Decision <b>–</b></span>
+          <span class="meta-item">Last obs <b id="lastObsTime">–</b></span>
+          <span class="meta-item">Cycle <b id="lastCycleTime">–</b></span>
+        </div>
+      </section>
+
+      <div class="banner" id="emptyStateBanner" role="status" hidden>
+        <div class="banner-body">
+          <span class="banner-title" id="emptyStateTitle">Nothing trained in this run directory yet</span>
+          <span class="banner-text" id="emptyStateText">Run <code>aqi-pipeline simulate</code> for a 15-month demo, or <code>bootstrap</code> then <code>run-cycle</code> for a live station. The What-if view works now with synthetic sample data.</span>
+        </div>
+        <button type="button" class="btn" id="emptyStateAction">Open What-if</button>
       </div>
 
-      <div class="banner warn" id="decisionBanner" hidden>
-        <div>
-          <strong id="decisionBannerTitle">Cycle notice</strong>:
-          <span id="decisionBannerReason"></span>
+      <div class="banner warn" id="decisionBanner" role="status" hidden>
+        <div class="banner-body">
+          <span class="banner-title" id="decisionBannerTitle">Latest decision</span>
+          <span class="banner-text" id="decisionBannerReason"></span>
         </div>
-        <span class="pill" id="decisionBannerTime"></span>
+        <span class="eyebrow" id="decisionBannerTime"></span>
       </div>
 
-      <!-- VIEW 1: OVERVIEW -->
-      <section class="view" id="view-overview" data-view="overview">
-        <div class="hero-grid">
-          <section class="card" style="margin-bottom:0;">
-            <div class="card-head" style="margin-bottom:6px;">
-              <div>
-                <h2>Current Station AQI</h2>
-                <p class="sub" id="gaugeSub">Latest hourly CPCB reading</p>
-              </div>
-              <span id="gaugeCatPill"></span>
+      <!-- VIEW 1 · OVERVIEW -->
+      <section class="view" id="view-overview" data-view="overview" aria-label="Overview">
+        <div class="grid-hero">
+          <section class="tray" aria-labelledby="nowTitle">
+            <div class="tray-head">
+              <h2 class="tray-title" id="nowTitle">Air quality now</h2>
+              <span class="eyebrow" id="gaugeSub">–</span>
             </div>
-            <div id="aqiGaugeHost"></div>
-            <div class="muted" id="gaugeFooter" style="text-align:center; margin-top:4px;">Waiting for station data</div>
+            <div class="card">
+              <div id="aqiGaugeHost"></div>
+              <div class="stat-context" id="gaugeFooter">Waiting for station data</div>
+            </div>
           </section>
 
-          <section class="card" style="margin-bottom:0;">
-            <div class="card-head" style="margin-bottom:10px;">
-              <div>
-                <h2>Live Pollutant &amp; Weather Readings</h2>
-                <p class="sub">Latest quality-checked hourly measurements at the monitoring station.</p>
+          <div class="grid-stats">
+            <section class="tray" aria-labelledby="fcTitle">
+              <div class="tray-head">
+                <h2 class="tray-title" id="fcTitle">Next 24 hours</h2>
+                <span id="kpiFcCat"></span>
               </div>
-              <span class="pill" id="qcLatestPill">QC: –</span>
-            </div>
-            <div class="pollutant-grid" id="pollutantCards"></div>
-          </section>
+              <div class="card">
+                <div>
+                  <div class="stat-value" id="kpiFcVal">–</div>
+                  <div class="stat-context" id="kpiFcMeta">No forecast yet</div>
+                </div>
+                <div class="spark" id="kpiFcSpark" role="img" aria-label="Hourly forecast trend"></div>
+              </div>
+            </section>
+
+            <section class="tray" aria-labelledby="perfTitle">
+              <div class="tray-head">
+                <h2 class="tray-title" id="perfTitle">Forecast error</h2>
+                <span id="kpiPerfBadge"></span>
+              </div>
+              <div class="card">
+                <div>
+                  <div class="stat-value" id="kpiPerfVal">–</div>
+                  <div class="stat-context" id="kpiPerfMeta">No scored cycle yet</div>
+                </div>
+                <div class="stack" style="gap:6px">
+                  <div class="meter" id="kpiPerfMeter" role="img" aria-label="Error ratio versus expectation"><i></i></div>
+                  <div class="meter-legend"><span>0×</span><span>expected 1×</span><span>2×</span></div>
+                </div>
+              </div>
+            </section>
+
+            <section class="tray" aria-labelledby="driftTitle">
+              <div class="tray-head">
+                <h2 class="tray-title" id="driftTitle">Input drift</h2>
+                <span id="kpiDriftBadge"></span>
+              </div>
+              <div class="card">
+                <div>
+                  <div class="stat-value" id="kpiDriftVal">–</div>
+                  <div class="stat-context" id="kpiDriftMeta">No monitoring cycle yet</div>
+                </div>
+                <div class="stack" style="gap:6px">
+                  <div class="meter" id="kpiDriftMeter" role="img" aria-label="Drift score against thresholds"><i></i></div>
+                  <div class="meter-legend"><span>0</span><span id="kpiDriftThr">warn – · alert –</span><span>1</span></div>
+                </div>
+              </div>
+            </section>
+          </div>
         </div>
 
-        <section class="tiles" id="kpiGrid" aria-label="Key live metrics">
-          <div class="tile">
-            <div class="label"><span>Current Station AQI</span><span id="kpiCurrentCat"></span></div>
-            <div class="value" id="kpiCurrentVal">–</div>
-            <div class="delta" id="kpiCurrentMeta">Waiting for observations</div>
-          </div>
-          <div class="tile">
-            <div class="label"><span>Next Horizon (Mean / Peak)</span><span id="kpiFcCat"></span></div>
-            <div class="value" id="kpiFcVal">–</div>
-            <div class="delta" id="kpiFcMeta">No forecast horizon yet</div>
-          </div>
-          <div class="tile">
-            <div class="label"><span>Accuracy vs Expectation</span><span id="kpiPerfBadge"></span></div>
-            <div class="value" id="kpiPerfVal">–</div>
-            <div class="delta" id="kpiPerfMeta">No scored cycle yet</div>
-          </div>
-          <div class="tile">
-            <div class="label"><span>Input Drift &amp; CUSUM</span><span id="kpiDriftBadge"></span></div>
-            <div class="value" id="kpiDriftVal">–</div>
-            <div class="delta" id="kpiDriftMeta">No drift snapshot yet</div>
-          </div>
-        </section>
-
-        <section class="card">
-          <div class="card-head">
+        <section class="panel" aria-labelledby="forecastTitle">
+          <div class="panel-head">
             <div>
-              <h2>Interactive Forecast View (24h–168h Window)</h2>
-              <p class="sub" id="forecastSubtitle">Actual hourly station AQI vs served forecast, extending into the upcoming horizon.</p>
+              <h2 class="panel-title" id="forecastTitle">Actual vs forecast AQI</h2>
+              <p class="panel-sub" id="forecastSubtitle">Hourly station AQI against the served forecast, running into the next horizon.</p>
             </div>
-            <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
-              <span class="pill" id="forecastServedBadge">Served by: –</span>
-              <div class="seg" role="group" aria-label="Forecast horizon selector" id="horizonSelector">
-                <button type="button" data-hours="24">24h</button>
-                <button type="button" data-hours="48">48h</button>
-                <button type="button" data-hours="72" class="active">72h</button>
-                <button type="button" data-hours="168">168h</button>
+            <div class="panel-actions">
+              <span class="pill" id="forecastServedBadge">Served by –</span>
+              <div class="seg" role="group" aria-label="History window" id="horizonSelector">
+                <button type="button" data-hours="24" aria-pressed="false">24h</button>
+                <button type="button" data-hours="48" aria-pressed="false">48h</button>
+                <button type="button" data-hours="72" class="active" aria-pressed="true">72h</button>
+                <button type="button" data-hours="168" aria-pressed="false">7d</button>
               </div>
-              <button type="button" class="btn sm" id="exportForecastCsvBtn">Export CSV</button>
             </div>
           </div>
 
-          <div class="cat-legend" id="cpcbLegend"></div>
-          <div class="toggle-row" id="seriesToggles">
-            <label><input type="checkbox" id="togActual" checked> Actual AQI</label>
-            <label><input type="checkbox" id="togServed" checked> Served Forecast</label>
-            <label><input type="checkbox" id="togModel"> Raw Model</label>
-            <label><input type="checkbox" id="togPersistence" checked> Persistence</label>
-            <label><input type="checkbox" id="togBands" checked> CPCB Bands</label>
+          <div class="legend-row">
+            <div class="toggles" id="seriesToggles" role="group" aria-label="Chart series">
+              <label class="toggle"><input type="checkbox" id="togActual" checked><span class="key" style="border-color:var(--series-ink)"></span>Actual</label>
+              <label class="toggle"><input type="checkbox" id="togServed" checked><span class="key" style="border-color:var(--s1)"></span>Served forecast</label>
+              <label class="toggle"><input type="checkbox" id="togPersistence" checked><span class="key dashed" style="border-color:var(--s2)"></span>Persistence</label>
+              <label class="toggle"><input type="checkbox" id="togModel"><span class="key dotted" style="border-color:var(--s4)"></span>Raw model</label>
+              <label class="toggle"><input type="checkbox" id="togBands" checked><span class="key band"></span>CPCB bands</label>
+            </div>
+            <div class="cat-legend" id="cpcbLegend" aria-label="CPCB categories"></div>
           </div>
           <div class="chart" id="forecastChartHost"></div>
+        </section>
 
-          <div style="margin-top:14px;">
-            <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px;">
-              <h3 style="margin:0;">Upcoming Served Forecasts (<span id="upcomingCount">0</span>h)</h3>
-              <div class="chip-list" id="upcomingCatSummary" style="margin:0;"></div>
+        <div class="readings-wrap">
+          <section class="panel" aria-labelledby="readingsTitle">
+            <div class="panel-head">
+              <div>
+                <h2 class="panel-title" id="readingsTitle">Pollutants</h2>
+                <p class="panel-sub">Latest quality-checked hour. Bars fill toward the CPCB "Poor" breakpoint.</p>
+              </div>
+              <span class="pill" id="qcLatestPill">QC –</span>
             </div>
-            <div class="scroll-box" id="forecastTableHost"></div>
+            <div class="readings" id="pollutantCards"></div>
+          </section>
+          <section class="panel" aria-labelledby="weatherTitle">
+            <div class="panel-head">
+              <div>
+                <h2 class="panel-title" id="weatherTitle">Weather</h2>
+                <p class="panel-sub">Drives dispersion: low wind and high humidity trap particulates.</p>
+              </div>
+            </div>
+            <div class="readings" id="weatherCards"></div>
+          </section>
+        </div>
+
+        <section class="panel" aria-labelledby="upcomingTitle">
+          <div class="panel-head">
+            <div>
+              <h2 class="panel-title" id="upcomingTitle">Upcoming forecasts · <span id="upcomingCount">0</span> hours</h2>
+              <p class="panel-sub">What the API is serving for each target hour, with the model and persistence values behind it.</p>
+            </div>
+            <div class="panel-actions">
+              <div class="chip-list" id="upcomingCatSummary"></div>
+              <button type="button" class="btn" id="exportForecastCsvBtn">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Export CSV
+              </button>
+            </div>
           </div>
+          <div class="table-wrap" id="forecastTableHost"></div>
         </section>
       </section>
 
-      <!-- VIEW 2: DIAGNOSTICS -->
-      <section class="view" id="view-diagnostics" data-view="diagnostics" hidden>
-        <section class="card">
-          <div class="card-head">
-            <div>
-              <h2>Monitoring &amp; Model Health Signals</h2>
-              <p class="sub">Input drift (seasonal PSI + out-of-envelope novelty), error ratio vs persistence, CUSUM alarm, and data quality.</p>
+      <!-- VIEW 2 · DRIFT & HEALTH -->
+      <section class="view" id="view-diagnostics" data-view="diagnostics" aria-label="Drift and health" hidden>
+        <div class="grid-3">
+          <section class="tray" aria-labelledby="sigDriftTitle">
+            <div class="tray-head">
+              <h2 class="tray-title" id="sigDriftTitle">Input drift</h2>
+              <span class="pill" id="driftLevelPill">–</span>
             </div>
-            <span class="pill" id="healthSummaryPill">Waiting for cycle</span>
-          </div>
-
-          <div class="grid3">
-            <div class="subpanel">
-              <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h3 style="margin:0;">Input Drift</h3>
-                <span class="pill" id="driftLevelPill">–</span>
-              </div>
-              <div style="font-size:22px; font-weight:700; margin-top:6px;" id="driftScoreNum">–</div>
-              <div class="meter"><i id="driftMeter" style="width:0%"></i></div>
-              <div class="muted" id="driftRefMeta">Thresholds: warn – · alert –</div>
+            <div class="card signal">
+              <div class="stat-value" id="driftScoreNum">–</div>
+              <div class="meter" id="driftMeterWrap"><i id="driftMeter"></i></div>
+              <div class="signal-meta" id="driftRefMeta">Thresholds: warn – · alert –</div>
               <div class="chip-list" id="driftedFeaturesList"></div>
             </div>
-
-            <div class="subpanel">
-              <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h3 style="margin:0;">Performance Ratio</h3>
-                <span class="pill" id="perfLevelPill">–</span>
-              </div>
-              <div style="font-size:22px; font-weight:700; margin-top:6px;" id="perfRatioNum">–</div>
-              <div class="meter"><i id="perfMeter" style="width:0%"></i></div>
-              <div class="muted" id="perfDetailMeta">Model MAE – · Persistence MAE –</div>
-              <div class="muted" id="perfCovMeta" style="margin-top:4px;">Coverage: – · Cat acc: –</div>
+          </section>
+          <section class="tray" aria-labelledby="sigPerfTitle">
+            <div class="tray-head">
+              <h2 class="tray-title" id="sigPerfTitle">Error vs expectation</h2>
+              <span class="pill" id="perfLevelPill">–</span>
             </div>
-
-            <div class="subpanel">
-              <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h3 style="margin:0;">CUSUM &amp; Data Quality</h3>
-                <span class="pill" id="cusumAlarmPill">–</span>
+            <div class="card signal">
+              <div class="stat-value" id="perfRatioNum">–</div>
+              <div class="meter" id="perfMeterWrap"><i id="perfMeter"></i></div>
+              <div class="signal-meta">
+                <span id="perfDetailMeta">Model MAE – · persistence MAE –</span>
+                <span id="perfCovMeta"></span>
               </div>
-              <div style="font-size:22px; font-weight:700; margin-top:6px;" id="cusumGNum">–</div>
-              <div class="meter"><i id="cusumMeter" style="width:0%"></i></div>
-              <div class="muted" id="cusumMeta">Alarm threshold: –</div>
-              <div class="muted" id="qualityMeta" style="margin-top:4px;">Quality bad fraction: –</div>
+            </div>
+          </section>
+          <section class="tray" aria-labelledby="sigCusumTitle">
+            <div class="tray-head">
+              <h2 class="tray-title" id="sigCusumTitle">CUSUM &amp; data quality</h2>
+              <span class="pill" id="cusumAlarmPill">–</span>
+            </div>
+            <div class="card signal">
+              <div class="stat-value" id="cusumGNum">–</div>
+              <div class="meter" id="cusumMeterWrap"><i id="cusumMeter"></i></div>
+              <div class="signal-meta">
+                <span id="cusumMeta">Alarm threshold –</span>
+                <span id="qualityMeta">Quality –</span>
+              </div>
+            </div>
+          </section>
+        </div>
+        <p class="sr-only" id="healthSummaryPill"></p>
+
+        <section class="panel" aria-labelledby="cycleTitle">
+          <div class="panel-head">
+            <div>
+              <h2 class="panel-title" id="cycleTitle">Monitoring signals by cycle</h2>
+              <p class="panel-sub">Each daily cycle scores error, input drift and accumulated excess error. Dashed rules mark the policy thresholds; faint blue rules mark retrain decisions.</p>
             </div>
           </div>
+          <div class="chart" id="cycleChartHost"></div>
         </section>
 
-        <div class="grid2">
-          <section class="card" style="margin-bottom:0;">
-            <div class="card-head">
+        <div class="grid-2">
+          <section class="panel" aria-labelledby="impTitle">
+            <div class="panel-head">
               <div>
-                <h2>Champion Feature Importance</h2>
-                <p class="sub">Permutation reliance per raw input group (weights the drift score).</p>
+                <h2 class="panel-title" id="impTitle">What the champion relies on</h2>
+                <p class="panel-sub">Permutation importance per raw input. It weights the drift score, so drift in a heavy input counts more.</p>
               </div>
             </div>
             <div class="chart" id="importanceChartHost"></div>
           </section>
-
-          <section class="card" style="margin-bottom:0;">
-            <div class="card-head">
+          <section class="panel" aria-labelledby="maeTitle">
+            <div class="panel-head">
               <div>
-                <h2>Monthly MAE Comparison</h2>
-                <p class="sub">Pipeline vs Fixed-schedule retraining, Persistence, and Static baseline.</p>
+                <h2 class="panel-title" id="maeTitle">Monthly error by strategy</h2>
+                <p class="panel-sub">Mean absolute error of this pipeline against fixed monthly retraining, persistence and a model never retrained. Lower is better.</p>
               </div>
             </div>
             <div class="legend" id="monthlyMaeLegend"></div>
@@ -274,177 +361,170 @@
           </section>
         </div>
 
-        <section class="card">
-          <div class="card-head">
-            <div>
-              <h2>Cycle Monitoring Signals</h2>
-              <p class="sub">Accuracy ratio, input drift score, and CUSUM over all recorded cycles.</p>
-            </div>
-          </div>
-          <div class="chart" id="cycleChartHost"></div>
-        </section>
-
-        <div class="grid2">
-          <section class="card" style="margin-bottom:0;">
-            <div class="card-head">
+        <div class="grid-2">
+          <section class="panel" aria-labelledby="featTitle">
+            <div class="panel-head">
               <div>
-                <h2>Per-Feature Drift Breakdown</h2>
-                <p class="sub">Click any column header to sort by PSI, threshold ratio, novelty, or importance weight.</p>
+                <h2 class="panel-title" id="featTitle">Drift by feature</h2>
+                <p class="panel-sub">Latest cycle. Select a column header to sort.</p>
               </div>
             </div>
-            <div class="scroll-box" id="driftFeatureTable"></div>
+            <div class="table-wrap" id="driftFeatureTable"></div>
           </section>
-
-          <section class="card" style="margin-bottom:0;">
-            <div class="card-head">
+          <section class="panel" aria-labelledby="timelineTitle">
+            <div class="panel-head">
               <div>
-                <h2>Cycle Decision Timeline</h2>
-                <p class="sub">Latest policy decisions (<code class="mono">none</code>, <code class="mono">watch</code>, <code class="mono">hold</code>, <code class="mono">retrain</code>).</p>
+                <h2 class="panel-title" id="timelineTitle">Decision timeline</h2>
+                <p class="panel-sub">Newest first. Watch flags a signal, hold freezes retraining, retrain starts a challenger.</p>
               </div>
             </div>
-            <div class="scroll-box" id="cycleTimelineHost"></div>
+            <div class="table-wrap" id="cycleTimelineHost"></div>
           </section>
         </div>
       </section>
 
-      <!-- VIEW 3: SIMULATOR & BATCH STUDIO -->
-      <section class="view" id="view-simulator" data-view="simulator" hidden>
-        <section class="card">
-          <div class="card-head">
+      <!-- VIEW 3 · WHAT-IF & BATCH -->
+      <section class="view" id="view-simulator" data-view="simulator" aria-label="What-if and batch scoring" hidden>
+        <section class="panel" aria-labelledby="whatifTitle">
+          <div class="panel-head">
             <div>
-              <h2>9-Day (216h) What-If Scoring Playground (<span class="mono">POST /predict</span>)</h2>
-              <p class="sub">Load 216 hourly observations, pick a scenario preset or tune sliders, and run live stateless scoring.</p>
+              <h2 class="panel-title" id="whatifTitle">What-if scoring</h2>
+              <p class="panel-sub">Load 9 days of hourly history, change the latest conditions, and score them against the champion with <code>POST /predict</code>. Nothing is stored.</p>
             </div>
-            <div style="display:flex; flex-wrap:wrap; gap:7px; align-items:center;">
-              <button type="button" class="btn sm" id="loadLatestBtn">Load Latest (216h)</button>
-              <button type="button" class="btn sm" id="loadSampleBtn">Load Sample (216h)</button>
-              <button type="button" class="btn sm" id="resetPlaygroundBtn">Reset</button>
-              <button type="button" class="btn sm primary" id="runPredictBtn">Run POST /predict</button>
+            <div class="panel-actions">
+              <button type="button" class="btn ghost" id="resetPlaygroundBtn">Reset</button>
+              <button type="button" class="btn" id="loadSampleBtn">Use sample data</button>
+              <button type="button" class="btn" id="loadLatestBtn">Load station history</button>
+              <button type="button" class="btn primary" id="runPredictBtn">Score scenario</button>
             </div>
           </div>
 
-          <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px;">
-            <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
-              <span class="pill info" id="playgroundSourcePill">No observations loaded yet</span>
-              <span class="muted">Presets:</span>
-              <button type="button" class="btn sm" data-preset="baseline">Current Baseline</button>
-              <button type="button" class="btn sm" data-preset="smoke">Winter Smoke Spike</button>
-              <button type="button" class="btn sm" data-preset="ozone">Summer Ozone Peak</button>
-              <button type="button" class="btn sm" data-preset="stuck">Stuck Sensor Fault</button>
+          <div class="preset-row">
+            <div class="chip-list" style="align-items:center">
+              <span class="pill info" id="playgroundSourcePill">No history loaded</span>
             </div>
-            <label style="display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--ink2);">
-              Apply edits to:
+            <label class="field">Apply edits to
               <select id="adjustScope">
-                <option value="24">Latest 24 hours (what-if scenario)</option>
-                <option value="1">Latest 1 hour only</option>
+                <option value="24">last 24 hours</option>
+                <option value="1">latest hour only</option>
               </select>
             </label>
           </div>
 
+          <div class="stack" style="gap:8px">
+            <div class="eyebrow">Scenarios</div>
+            <div class="seg" role="group" aria-label="Scenario presets" id="presetGroup">
+              <button type="button" data-preset="baseline">Station baseline</button>
+              <button type="button" data-preset="smoke">Winter smoke</button>
+              <button type="button" data-preset="ozone">Summer ozone</button>
+              <button type="button" data-preset="stuck">Stuck PM2.5 sensor</button>
+            </div>
+          </div>
+
           <div class="playground-grid">
             <div class="controls-grid" id="playgroundControls"></div>
-            <div class="predict-card" id="predictResultPanel">
-              <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
-                <span class="muted" style="font-weight:600; text-transform:uppercase; letter-spacing:0.04em;">Predicted AQI (+<span id="predHorizonLbl">24</span>h)</span>
-                <span class="pill" id="predCatBadge">Not run</span>
+            <section class="tray result-card" aria-labelledby="predTitle" aria-live="polite">
+              <div class="tray-head">
+                <h3 class="tray-title" id="predTitle">Predicted AQI · +<span id="predHorizonLbl">24</span>h</h3>
+                <span class="pill" id="predCatBadge">Not scored</span>
               </div>
-              <div id="predictGaugeHost" style="margin:4px 0;"></div>
-              <div class="predict-hero" id="predAqiVal" style="text-align:center;" hidden>–</div>
-              <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; justify-content:center;" id="predMetricsRow">
-                <span class="pill" id="predCurrentAqi">Current AQI: –</span>
-                <span class="pill" id="predDelta">Delta: –</span>
-                <span class="pill" id="predClean">Inputs: –</span>
-              </div>
-              <div class="muted" id="predTimestamps" style="text-align:center;">Target time: –</div>
-              <div style="margin-top:12px; padding-top:10px; border-top:1px solid var(--grid);">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                  <strong style="font-size:12.5px;">Data-Quality Gate</strong>
+              <div class="card">
+                <div id="predictGaugeHost"></div>
+                <div class="result-meta">
+                  <div><span class="stat-context">Now</span><strong id="predCurrentAqi">–</strong></div>
+                  <div><span class="stat-context">Change</span><strong id="predDelta">–</strong></div>
+                  <div><span class="stat-context">Inputs</span><strong id="predClean">–</strong></div>
+                </div>
+                <div class="stat-context" id="predTimestamps">Load history, then score a scenario.</div>
+                <hr class="divider">
+                <div class="stat-row" style="align-items:center">
+                  <span class="section-title">Data-quality gate</span>
                   <span class="pill" id="predQualityBadge">–</span>
                 </div>
-                <div id="predIssuesHost" class="muted">Click "Load Latest (216h)" then "Run POST /predict".</div>
+                <div class="issues" id="predIssuesHost">The gate checks ranges, gaps and stuck sensors before the model sees the data.</div>
               </div>
-            </div>
+            </section>
           </div>
         </section>
 
-        <section class="card">
-          <div class="card-head">
+        <section class="panel" aria-labelledby="batchTitle">
+          <div class="panel-head">
             <div>
-              <h2>Batch / CSV Scoring Studio (<span class="mono">POST /predict/batch</span>)</h2>
-              <p class="sub">Upload or paste >=24 hourly rows (CSV) to score every usable horizon window in one pass.</p>
+              <h2 class="panel-title" id="batchTitle">Batch scoring</h2>
+              <p class="panel-sub">Score every usable window in 24 or more hourly CSV rows with <code>POST /predict/batch</code>.</p>
             </div>
-            <div style="display:flex; flex-wrap:wrap; gap:7px; align-items:center;">
-              <button type="button" class="btn sm" id="loadSampleCsvBtn">Load Sample 72h CSV</button>
-              <button type="button" class="btn sm primary" id="runBatchBtn">Run Batch Predict</button>
-              <button type="button" class="btn sm" id="downloadBatchCsvBtn" disabled>Download Predictions CSV</button>
+            <div class="panel-actions">
+              <button type="button" class="btn" id="loadSampleCsvBtn">Load 72h sample</button>
+              <button type="button" class="btn" id="downloadBatchCsvBtn" disabled>Download results</button>
+              <button type="button" class="btn primary" id="runBatchBtn">Score batch</button>
             </div>
           </div>
 
-          <div class="grid2" style="margin-bottom:12px;">
-            <div style="display:flex; flex-direction:column; gap:8px;">
-              <div class="dropzone" id="csvDropzone" tabindex="0">
-                <div><strong>Drop a .csv file here</strong> or click to browse</div>
-                <div class="muted">Columns: timestamp, pm25, pm10, no2, so2, co, o3, temperature, humidity, wind_speed, precipitation</div>
+          <div class="grid-2">
+            <div class="stack">
+              <div class="dropzone" id="csvDropzone" tabindex="0" role="button" aria-label="Choose a CSV file">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg>
+                <div><strong>Drop a .csv file</strong> <span class="muted">or select to browse</span></div>
+                <div class="stat-context">timestamp, pm25, pm10, no2, so2, co, o3, temperature, humidity, wind_speed, precipitation</div>
                 <input type="file" id="csvFileInput" accept=".csv,text/csv" hidden>
               </div>
-              <textarea id="batchCsvInput" placeholder="Paste hourly CSV rows here or click 'Load Sample 72h CSV'…"></textarea>
+              <label class="sr-only" for="batchCsvInput">CSV rows</label>
+              <textarea id="batchCsvInput" placeholder="timestamp,pm25,pm10,…&#10;Paste hourly rows here, or load the 72h sample."></textarea>
             </div>
 
-            <div style="display:flex; flex-direction:column; gap:10px;">
-              <div class="subpanel">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                  <h3 style="margin:0;">Batch Summary</h3>
-                  <span class="pill" id="batchQualityPill">Not run</span>
-                </div>
-                <div class="chip-list" id="batchSummaryPills">
-                  <span class="pill">Rows scored: –</span>
-                  <span class="pill">Mean AQI: –</span>
-                  <span class="pill">Min / Max: –</span>
-                </div>
-                <div class="chip-list" id="batchCatCounts"></div>
-                <div class="muted" id="batchIssuesText" style="margin-top:6px;"></div>
+            <div class="stack">
+              <div class="stat-row" style="align-items:center">
+                <span class="section-title">Result</span>
+                <span class="pill" id="batchQualityPill">Not scored</span>
               </div>
+              <div class="summary-figs" id="batchSummaryPills">
+                <div><span class="stat-context">Windows scored</span><strong>–</strong></div>
+                <div><span class="stat-context">Mean AQI</span><strong>–</strong></div>
+                <div><span class="stat-context">Range</span><strong>–</strong></div>
+              </div>
+              <div class="chip-list" id="batchCatCounts"></div>
+              <div class="stat-context" id="batchIssuesText"></div>
               <div class="chart" id="batchChartHost"></div>
             </div>
           </div>
 
-          <div class="scroll-box" id="batchTableHost"></div>
+          <div class="table-wrap" id="batchTableHost"></div>
         </section>
       </section>
 
-      <!-- VIEW 4: REGISTRY & AUDIT -->
-      <section class="view" id="view-registry" data-view="registry" hidden>
-        <section class="card">
-          <div class="card-head">
+      <!-- VIEW 4 · REGISTRY & AUDIT -->
+      <section class="view" id="view-registry" data-view="registry" aria-label="Registry and audit" hidden>
+        <section class="panel" aria-labelledby="lineageTitle">
+          <div class="panel-head">
             <div>
-              <h2>Model Version Lineage</h2>
-              <p class="sub">Registered models across champion, shadow (probation), archived, and rolled-back stages.</p>
+              <h2 class="panel-title" id="lineageTitle">Model lineage</h2>
+              <p class="panel-sub">Every registered model, newest first. One champion serves; a shadow runs on probation before it can take over.</p>
             </div>
           </div>
           <div class="lineage-grid" id="versionLineageCards"></div>
-          <div class="scroll-box" id="versionsTableHost"></div>
+          <div class="table-wrap" id="versionsTableHost"></div>
         </section>
 
-        <div class="grid2">
-          <section class="card" style="margin-bottom:0;">
-            <div class="card-head">
+        <div class="grid-2">
+          <section class="panel" aria-labelledby="gateTitle">
+            <div class="panel-head">
               <div>
-                <h2>Retraining Gate History</h2>
-                <p class="sub">Challenger evaluations, holdout MAE, bootstrap probability, and promotion outcomes.</p>
+                <h2 class="panel-title" id="gateTitle">Retraining gate</h2>
+                <p class="panel-sub">Each challenger against the champion on a holdout. Promotion needs a real improvement at the configured confidence.</p>
               </div>
             </div>
-            <div class="scroll-box" style="max-height:420px;" id="retrainTableHost"></div>
+            <div class="table-wrap tall" id="retrainTableHost"></div>
           </section>
 
-          <section class="card" style="margin-bottom:0;" id="eventSection">
-            <div class="card-head">
+          <section class="panel" id="eventSection" aria-labelledby="eventsTitle">
+            <div class="panel-head">
               <div>
-                <h2>Audit Event Log</h2>
-                <p class="sub">Filterable history of promotions, rejections, rollbacks, safe mode, holds, and QC alerts.</p>
+                <h2 class="panel-title" id="eventsTitle">Audit log</h2>
+                <p class="panel-sub" id="eventsSub">Promotions, rejections, rollbacks, safe mode, holds and quality alerts.</p>
               </div>
-              <div style="display:flex; gap:6px;">
-                <button type="button" class="btn sm" id="exportEventsJsonBtn">Export JSON</button>
-                <button type="button" class="btn sm" id="exportEventsCsvBtn">Export CSV</button>
+              <div class="panel-actions">
+                <button type="button" class="btn ghost" id="exportEventsJsonBtn">JSON</button>
+                <button type="button" class="btn" id="exportEventsCsvBtn">Export CSV</button>
               </div>
             </div>
             <div class="filter-row">
@@ -453,55 +533,55 @@
               </select>
               <select id="eventSevFilter" aria-label="Filter events by severity">
                 <option value="">All severities</option>
-                <option value="info">info</option>
-                <option value="warning">warning</option>
-                <option value="error">error</option>
+                <option value="info">Info</option>
+                <option value="warning">Warning</option>
+                <option value="error">Error</option>
               </select>
-              <input type="text" id="eventSearch" placeholder="Search messages…" style="flex:1; min-width:130px;" aria-label="Search event messages">
+              <input type="text" id="eventSearch" placeholder="Search messages" aria-label="Search event messages">
             </div>
-            <div class="scroll-box" style="max-height:375px;" id="eventsTableHost"></div>
+            <div class="table-wrap" id="eventsTableHost"></div>
           </section>
         </div>
       </section>
 
-      <!-- VIEW 5: PIPELINE ARCHITECTURE & CONFIG -->
-      <section class="view" id="view-pipeline" data-view="pipeline" hidden>
-        <section class="card">
-          <div class="card-head">
+      <!-- VIEW 5 · ARCHITECTURE & CONFIG -->
+      <section class="view" id="view-pipeline" data-view="pipeline" aria-label="Architecture and configuration" hidden>
+        <section class="panel" aria-labelledby="flowTitle">
+          <div class="panel-head">
             <div>
-              <h2>7-Stage Pipeline Architecture</h2>
-              <p class="sub">Click any stage to inspect live telemetry and policy rules from the latest cycle.</p>
+              <h2 class="panel-title" id="flowTitle">Pipeline stages</h2>
+              <p class="panel-sub">One hourly pass through seven stages. Select a stage to see what it did in the latest cycle.</p>
             </div>
           </div>
           <div class="pipeline-flow" id="pipelineFlowHost"></div>
-          <div class="stage-detail-box" id="stageDetailHost">Select a stage above to inspect details.</div>
+          <div class="stage-detail" id="stageDetailHost" aria-live="polite">Select a stage above.</div>
         </section>
 
-        <section class="card">
-          <div class="card-head">
+        <section class="panel" aria-labelledby="telTitle">
+          <div class="panel-head">
             <div>
-              <h2>Store &amp; Runtime Telemetry</h2>
-              <p class="sub">Live database, registry, and environment metrics from <span class="mono">GET /api/config</span>.</p>
+              <h2 class="panel-title" id="telTitle">Store &amp; runtime</h2>
+              <p class="panel-sub">From <code>GET /api/config</code>.</p>
             </div>
           </div>
-          <div class="tiles" id="telemetryStrip" style="margin-bottom:0;"></div>
+          <div class="tiles" id="telemetryStrip"></div>
         </section>
 
-        <section class="card">
-          <div class="card-head">
+        <section class="panel" aria-labelledby="cfgTitle">
+          <div class="panel-head">
             <div>
-              <h2>Runtime Configuration Inspector</h2>
-              <p class="sub">Sanitized active settings (<span class="mono">DataConfig</span>, <span class="mono">ModelConfig</span>, <span class="mono">MonitorConfig</span>, <span class="mono">RetrainConfig</span>, <span class="mono">Source</span>).</p>
+              <h2 class="panel-title" id="cfgTitle">Active configuration</h2>
+              <p class="panel-sub">Sanitised settings the pipeline is running with.</p>
             </div>
           </div>
           <div class="kv-grid" id="configInspectorHost"></div>
         </section>
 
-        <section class="card">
-          <div class="card-head">
+        <section class="panel" aria-labelledby="cliTitle">
+          <div class="panel-head">
             <div>
-              <h2>Quick CLI &amp; API Reference</h2>
-              <p class="sub">Copyable commands for local simulation, live station cycles, and HTTP scoring.</p>
+              <h2 class="panel-title" id="cliTitle">Commands</h2>
+              <p class="panel-sub">Copy to reproduce this console locally or in Docker.</p>
             </div>
           </div>
           <div class="kv-grid" id="cliRefHost"></div>
@@ -511,7 +591,7 @@
   </div>
 </div>
 
-<div class="toast-host" id="toastHost" aria-live="polite"></div>
+<div class="toast-host" id="toastHost" role="status" aria-live="polite"></div>
 
 <script src="/static/charts.js"></script>
 <script src="/static/app.js"></script>
