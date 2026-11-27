@@ -32,7 +32,7 @@ aqi-pipeline --run-dir runs/demo serve        # http://127.0.0.1:8000/ (Operatio
 # Quality, lint, coverage, and package checks:
 ruff check src tests
 ruff format --check src tests
-pytest -q --cov=aqi_pipeline --cov-report=term-missing   # 73 tests
+pytest -q --cov=aqi_pipeline --cov-report=term-missing   # 74 tests
 python -m build
 ```
 

@@ -80,11 +80,24 @@ def simulation_settings(cfg: Config) -> dict[str, Any]:
     return {**DEFAULT_SIMULATION, **(cfg.simulation or {})}
 
 
+def clear_run_dir(run_dir: Path) -> None:
+    """Empty ``run_dir`` without removing the directory itself.
+
+    The run dir may be a mount point (e.g. a Docker volume at ``/data``) whose
+    parent is not writable, so only its contents are deleted.
+    """
+    for child in run_dir.iterdir():
+        if child.is_dir() and not child.is_symlink():
+            shutil.rmtree(child)
+        else:
+            child.unlink()
+
+
 def run_simulation(cfg: Config, fresh: bool = True, verbose: bool = True) -> dict[str, Any]:
     sim = simulation_settings(cfg)
     run_dir = Path(cfg.run_dir)
     if fresh and run_dir.exists():
-        shutil.rmtree(run_dir)
+        clear_run_dir(run_dir)
     run_dir.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
 
