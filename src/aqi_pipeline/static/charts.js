@@ -365,7 +365,7 @@
         if (cat.min >= top) return;
         const yHi = Y(Math.min(cat.max, top));
         const yLo = Y(cat.min);
-        el('rect', { x: box.x, y: yHi, width: box.w, height: Math.max(0, yLo - yHi), fill: cat.color, opacity: 0.08 }, svg);
+        el('rect', { x: box.x, y: yHi, width: box.w, height: Math.max(0, yLo - yHi), fill: cat.color, opacity: 0.08, class: 'band' }, svg);
         if (!narrow && yLo - yHi > 14) {
           el('text', { x: box.x + box.w + 8, y: (yHi + yLo) / 2 + 4 }, svg, cat.name);
         }
