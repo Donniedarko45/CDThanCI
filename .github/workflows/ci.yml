@@ -319,7 +319,18 @@ jobs:
         run: |
           set -euo pipefail
 
+          # Surface failures as workflow annotations (visible without log access).
+          annotate() {
+            local title="$1" body
+            body="$(cat | tail -n 40 | sed -e 's/%/%25/g' | sed -e ':a;N;$!ba;s/\n/%0A/g' -e 's/\r/%0D/g')"
+            echo "::error title=${title}::${body:-<empty>}"
+          }
+          trap 'echo "Command failed (line $LINENO): $BASH_COMMAND" | annotate "Smoke step failed"' ERR
+
           diagnostics() {
+            docker logs aqi-smoke 2>&1 | annotate "Container logs" || true
+            docker inspect --format '{{json .State.Health}}' aqi-smoke 2>&1 | annotate "Container health" || true
+            docker run --rm --entrypoint ls -v aqi_ci_smoke:/data aqi-pipeline:ci-test -la /data 2>&1 | annotate "Volume contents" || true
             echo "::group::Container state and health log"
             docker inspect --format '{{json .State}}' aqi-smoke 2>/dev/null | python3 -m json.tool || true
             echo "::endgroup::"
@@ -333,8 +344,11 @@ jobs:
           trap 'rc=$?; if [ "$rc" -ne 0 ]; then diagnostics; fi' EXIT
 
           docker volume create aqi_ci_smoke
-          docker run --rm -v aqi_ci_smoke:/data aqi-pipeline:ci-test \
-            aqi-pipeline --run-dir /data simulate --days 15 --quiet
+          if ! docker run --rm -v aqi_ci_smoke:/data aqi-pipeline:ci-test \
+            aqi-pipeline --run-dir /data simulate --days 15 --quiet > /tmp/seed.log 2>&1; then
+            annotate "Seeding simulation failed" < /tmp/seed.log
+            exit 1
+          fi
           docker run -d --name aqi-smoke -p 8000:8000 -v aqi_ci_smoke:/data aqi-pipeline:ci-test
 
           status=none
@@ -352,10 +366,18 @@ jobs:
           fi
 
           get() { curl -fsS --retry 5 --retry-delay 1 --retry-all-errors "http://127.0.0.1:8000$1"; }
-          get /health | python3 -c "import json,sys; d=json.load(sys.stdin); print(d); assert d['status']=='ok' and d['champion'], d"
-          get / | grep -q "AQI"
-          get /api/config | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['bootstrapped'] is True, d"
-          get /dashboard/data | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['status']['bootstrapped'] is True, d['status']"
+          check() {
+            local path="$1" code="$2" out
+            if ! out="$(get "$path" 2>&1)" || ! printf '%s' "$out" | python3 -c "$code" > /tmp/check.log 2>&1; then
+              { echo "GET $path"; printf '%s\n' "$out" | head -c 2000; echo; cat /tmp/check.log 2>/dev/null; } | annotate "Endpoint check failed: $path"
+              return 1
+            fi
+            echo "GET $path OK"
+          }
+          check /health "import json,sys; d=json.load(sys.stdin); assert d['status']=='ok' and d['champion'], d"
+          check / "import sys; assert 'AQI' in sys.stdin.read()"
+          check /api/config "import json,sys; d=json.load(sys.stdin); assert d['bootstrapped'] is True, d"
+          check /dashboard/data "import json,sys; d=json.load(sys.stdin); assert d['status']['bootstrapped'] is True, d['status']"
           echo "Docker smoke test passed"
 
       - name: Clean up smoke container and volume
